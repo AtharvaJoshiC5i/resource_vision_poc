@@ -47,7 +47,7 @@ export function DataSourcesPage() {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold text-slate-900">
-                Proof of Concept Data
+                Proof of Concept Data For Now
               </p>
 
               <Badge variant="blue">Synthetic Data</Badge>
