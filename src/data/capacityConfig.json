@@ -1,0 +1,602 @@
+[
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-03",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-04",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-05",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-06",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-07",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-08",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-09",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-10",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-11",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2026-12",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-03",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-04",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-05",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-06",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-07",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-08",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-09",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-10",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-11",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2026-12",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-03",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-04",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-05",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-06",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-07",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-08",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-09",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-10",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-11",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2026-12",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-03",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-04",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-05",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-06",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-07",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-08",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-09",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-10",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-11",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2026-12",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-03",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-04",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-05",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-06",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-07",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-08",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-09",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-10",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-11",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2026-12",
+    "working_days": 22,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 176
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2027-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2027-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "India",
+    "location": "Bengaluru",
+    "month_key": "2027-03",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2027-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2027-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "India",
+    "location": "Gurugram",
+    "month_key": "2027-03",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2027-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2027-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "India",
+    "location": "Mumbai",
+    "month_key": "2027-03",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2027-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2027-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "USA",
+    "location": "Chicago",
+    "month_key": "2027-03",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2027-01",
+    "working_days": 21,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 168
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2027-02",
+    "working_days": 20,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 160
+  },
+  {
+    "country": "USA",
+    "location": "New York",
+    "month_key": "2027-03",
+    "working_days": 23,
+    "hours_per_day": 8,
+    "standard_capacity_hours": 184
+  }
+]
