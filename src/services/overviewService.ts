@@ -5,6 +5,10 @@ import { FAMSTACK_MONTHS, PROJECT_TRACK_MONTHS } from "../constants/poc";
 
 import { aggregateResourceRecords } from "./aggregationService";
 
+import { compareMonthKeys } from "./monthService";
+
+import { getPlanningCurrentMonth } from "./planningHorizonRuntime";
+
 export interface OverviewSnapshot {
   monthKey: string;
 
@@ -97,11 +101,9 @@ function getMonthRecords(
 }
 
 function getSourceForMonth(monthKey: string): "FAMSTACK" | "PROJECT_TRACK" {
-  return PROJECT_TRACK_MONTHS.includes(
-    monthKey as (typeof PROJECT_TRACK_MONTHS)[number],
-  )
-    ? "PROJECT_TRACK"
-    : "FAMSTACK";
+  return compareMonthKeys(monthKey, getPlanningCurrentMonth()) < 0
+    ? "FAMSTACK"
+    : "PROJECT_TRACK";
 }
 
 export function getOverviewSnapshot(

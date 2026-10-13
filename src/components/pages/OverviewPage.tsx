@@ -8,7 +8,7 @@ import {
   Users,
 } from "lucide-react";
 
-import { resourceMonthlyRecords, unassignedDemand } from "../../data";
+import { useResourceData } from "../../context/ResourceDataContext";
 
 import {
   getCapabilityAvailability,
@@ -40,6 +40,8 @@ import { Badge } from "../ui/Badge";
 import { PageHeader } from "../ui/PageHeader";
 
 export function OverviewPage() {
+  const { resourceMonthlyRecords, unassignedDemand } = useResourceData();
+
   const [selectedMonth, setSelectedMonth] = useState<string>(POC_CURRENT_MONTH);
 
   const snapshot = useMemo(
@@ -49,27 +51,27 @@ export function OverviewPage() {
         unassignedDemand,
         selectedMonth,
       ),
-    [selectedMonth],
+    [resourceMonthlyRecords, unassignedDemand, selectedMonth],
   );
 
   const capabilityAvailability = useMemo(
     () => getCapabilityAvailability(resourceMonthlyRecords, selectedMonth),
-    [selectedMonth],
+    [resourceMonthlyRecords, selectedMonth],
   );
 
   const monthlyDemand = useMemo(
     () => getMonthlyUnassignedDemand(unassignedDemand, selectedMonth),
-    [selectedMonth],
+    [unassignedDemand, selectedMonth],
   );
 
   const trend = useMemo(
     () => getMonthlyAvailabilityTrend(resourceMonthlyRecords),
-    [],
+    [resourceMonthlyRecords],
   );
 
   const capacityOutlook = useMemo(
     () => getCapacityOutlook(resourceMonthlyRecords),
-    [],
+    [resourceMonthlyRecords],
   );
 
   const isHistorical = selectedMonth < POC_CURRENT_MONTH;

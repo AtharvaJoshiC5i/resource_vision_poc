@@ -7,7 +7,7 @@ import type {
   ResourceFilters as ResourceFilterValues,
 } from "../../types/resources";
 
-import { RESOURCE_MONTHS } from "../../services/resourcesService";
+import { getPlanningMonthKeys } from "../../services/planningHorizonRuntime";
 
 import { formatMonth } from "../../utils/formatters";
 
@@ -172,7 +172,7 @@ export function ResourceFilters({
             onChange={(event) => onFilterChange("month", event.target.value)}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           >
-            {RESOURCE_MONTHS.map((monthKey) => (
+            {getPlanningMonthKeys().map((monthKey) => (
               <option key={monthKey} value={monthKey}>
                 {formatMonth(monthKey)}
               </option>

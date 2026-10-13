@@ -10,7 +10,7 @@ import type { ResourceMonthlyRecord } from "../types/resourceMonthly";
 
 import type { ZingHREmployee } from "../types/zinghr";
 
-import { FAMSTACK_MONTHS, PROJECT_TRACK_MONTHS } from "../constants/poc";
+import { getPlanningMonthKeys } from "./planningHorizonRuntime";
 
 import { normalizeEmployees } from "./normalization/employeeNormalizationService";
 
@@ -23,7 +23,7 @@ import {
 
 import { normalizeWorkCalendar } from "./normalization/workCalendarNormalizationService";
 
-import { getAvailabilityForRange } from "./availabilityQueryService";
+import { getAvailabilityForMonthKeys } from "./availabilityQueryService";
 
 /*
  * Complete synthetic data horizon used by the
@@ -39,8 +39,6 @@ import { getAvailabilityForRange } from "./availabilityQueryService";
  * the centralized POC constants rather than being
  * hard-coded to a specific year.
  */
-const POC_MONTHS = [...FAMSTACK_MONTHS, ...PROJECT_TRACK_MONTHS];
-
 export interface BuildResourceMonthlyRecordsInput {
   employees: ZingHREmployee[];
 
@@ -91,7 +89,13 @@ export function buildEmployeeMonthAvailabilities({
    * synthetic horizon, including the
    * Dec 2026 -> Jan 2027 year boundary.
    */
-  return getAvailabilityForRange(
+  const monthKeys = getPlanningMonthKeys();
+
+  if (monthKeys.length === 0) {
+    return [];
+  }
+
+  return getAvailabilityForMonthKeys(
     {
       employees: normalizedEmployees,
 
@@ -103,10 +107,7 @@ export function buildEmployeeMonthAvailabilities({
 
       workCalendar,
     },
-
-    POC_MONTHS[0],
-
-    POC_MONTHS.length,
+    monthKeys,
   );
 }
 

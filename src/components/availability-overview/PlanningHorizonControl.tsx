@@ -38,8 +38,8 @@ export function PlanningHorizonControl({
         <ChevronLeft className="size-4" aria-hidden="true" />
       </button>
 
-      <div className="min-w-44 border-x border-slate-200 px-4 py-2 text-center">
-        <p className="text-xs font-medium text-slate-700">
+      <div className="min-w-48 border-x border-slate-200 px-4 py-2.5 text-center">
+        <p className="text-sm font-medium text-slate-800">
           {formatMonth(startMonth)}
           {" – "}
           {formatMonth(endMonth)}

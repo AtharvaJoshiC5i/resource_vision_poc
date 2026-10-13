@@ -106,11 +106,11 @@ export function AvailabilityMonthCell({
     return (
       <div
         title={`${formatLongMonth(monthKey)}: Not in workforce`}
-        className="flex h-[54px] w-full flex-col items-center justify-center rounded-lg border border-slate-200 bg-slate-50/60"
+        className="flex h-[56px] w-full flex-col items-center justify-center rounded-md border border-slate-200 bg-slate-50/60"
       >
-        <span className="text-sm font-semibold text-slate-300">—</span>
+        <span className="text-xs font-semibold text-slate-400">—</span>
 
-        <span className="mt-0.5 text-[10px] font-medium leading-none text-slate-400">
+        <span className="mt-0.5 text-[10px] font-medium leading-snug text-slate-500">
           Not active
         </span>
       </div>
@@ -125,12 +125,12 @@ export function AvailabilityMonthCell({
   return (
     <div
       title={buildExplanation(availability, monthKey)}
-      className={`flex h-[54px] w-full flex-col items-center justify-center rounded-lg border ${getCellClasses(
+      className={`flex h-[56px] w-full flex-col items-center justify-center rounded-md border px-1 ${getCellClasses(
         availability,
       )}`}
     >
       <span
-        className={`whitespace-nowrap text-[13px] font-semibold leading-none tabular-nums ${getHoursClasses(
+        className={`whitespace-nowrap text-xs font-semibold leading-tight tabular-nums ${getHoursClasses(
           availability,
         )}`}
       >
@@ -138,7 +138,7 @@ export function AvailabilityMonthCell({
       </span>
 
       <span
-        className={`mt-1.5 whitespace-nowrap text-[10px] font-medium leading-none ${getStatusClasses(
+        className={`mt-1 whitespace-nowrap text-[10px] font-medium leading-snug ${getStatusClasses(
           availability,
         )}`}
       >

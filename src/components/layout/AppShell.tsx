@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Outlet } from "react-router-dom";
 
+import { DataQualityBanner } from "./DataQualityBanner";
 import { Header } from "./Header";
 import { MobileNavigation } from "./MobileNavigation";
 import { Sidebar } from "./Sidebar";
@@ -23,8 +24,10 @@ export function AppShell() {
       <div className="min-w-0 lg:pl-64">
         <Header onOpenNavigation={() => setMobileNavigationOpen(true)} />
 
+        <DataQualityBanner />
+
         <main className="min-w-0">
-          <div className="w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          <div className="w-full px-4 py-6 sm:px-6 lg:px-8 lg:py-8 [&_section]:scroll-mt-6">
             <Outlet />
           </div>
         </main>

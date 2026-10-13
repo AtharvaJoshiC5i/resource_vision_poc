@@ -1,16 +1,34 @@
+import { useState } from "react";
+
 import { ArrowUpRight } from "lucide-react";
 
 import type { UpcomingAvailabilityMonthSummary } from "../../types/availabilityAttention";
+
+import type {
+  AvailabilityTransition,
+  EmployeeMonthAvailability,
+} from "../../types/domain";
 
 import { formatHours, formatMonth } from "../../utils/formatters";
 
 import { Card } from "../ui/Card";
 
+import { UpcomingAvailabilityMonthModal } from "./UpcomingAvailabilityMonthModal";
+
 interface UpcomingAvailabilityProps {
   summaries: UpcomingAvailabilityMonthSummary[];
+  transitions: AvailabilityTransition[];
+  records: EmployeeMonthAvailability[];
 }
 
-export function UpcomingAvailability({ summaries }: UpcomingAvailabilityProps) {
+export function UpcomingAvailability({
+  summaries,
+  transitions,
+  records,
+}: UpcomingAvailabilityProps) {
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(
+    null,
+  );
   return (
     <Card padding={false}>
       <div className="border-b border-slate-200 px-5 py-4">
@@ -47,9 +65,15 @@ export function UpcomingAvailability({ summaries }: UpcomingAvailabilityProps) {
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
+        <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
           {summaries.map((summary) => (
-            <div key={summary.monthKey} className="px-5 py-4">
+            <button
+              key={summary.monthKey}
+              type="button"
+              onClick={() => setSelectedMonthKey(summary.monthKey)}
+              aria-label={`View employees gaining capacity in ${formatMonth(summary.monthKey)}`}
+              className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/40 px-4 py-4 text-left outline-none transition-colors hover:border-blue-200 hover:bg-blue-50/30 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+            >
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-semibold text-slate-900">
                   {formatMonth(summary.monthKey)}
@@ -79,9 +103,18 @@ export function UpcomingAvailability({ summaries }: UpcomingAvailabilityProps) {
                   label="Becoming fully available"
                 />
               </div>
-            </div>
+            </button>
           ))}
         </div>
+      )}
+
+      {selectedMonthKey !== null && (
+        <UpcomingAvailabilityMonthModal
+          monthKey={selectedMonthKey}
+          transitions={transitions}
+          monthRecords={records}
+          onClose={() => setSelectedMonthKey(null)}
+        />
       )}
 
       <div className="border-t border-slate-100 bg-slate-50/40 px-5 py-3">

@@ -12,8 +12,8 @@ const DIMENSIONS: ResourceDimension[] = [
   "secondaryCapability",
   "department",
   "grade",
-  "location",
   "country",
+  "location",
 ];
 
 function normalizeSearch(value: string): string {

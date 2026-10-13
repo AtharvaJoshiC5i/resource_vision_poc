@@ -2,9 +2,32 @@ import { BriefcaseBusiness, CalendarClock, History, Users } from "lucide-react";
 
 import type { DataSourceSummary, DataStatusRow } from "../types/dataSources";
 
-import { capacityConfig, famstack, projectTrack, zinghr } from "../data";
+import type { ResourceDataMode } from "../types/resourceDataMode";
 
-export function getDataSourceSummary(): DataSourceSummary[] {
+export interface DataSourceCounts {
+  zinghr: number;
+  famstack: number;
+  projectTrack: number;
+  capacityConfig: number;
+}
+
+export function getDataSourceSummary(
+  counts: DataSourceCounts,
+  mode: ResourceDataMode = "mock",
+): DataSourceSummary[] {
+  const isOrganization = mode === "organization";
+  const zinghrDescription = isOrganization
+    ? "Employee master derived from Project Track and Famstack employee codes."
+    : "Employee information used to establish resource identity and organizational dimensions.";
+
+  const famstackDescription = isOrganization
+    ? "Historical billable and non-billable effort loaded from Azure SQL."
+    : "Historical employee effort used to understand actual utilization.";
+
+  const projectTrackDescription = isOrganization
+    ? "Planned project effort loaded from Azure SQL."
+    : "Monthly planned project effort used to understand current and future utilization.";
+
   return [
     {
       id: "zinghr",
@@ -15,12 +38,11 @@ export function getDataSourceSummary(): DataSourceSummary[] {
 
       question: "WHO do we have?",
 
-      description:
-        "Employee information used to establish resource identity and organizational dimensions.",
+      description: zinghrDescription,
 
-      recordCount: zinghr.length,
+      recordCount: counts.zinghr,
 
-      recordLabel: zinghr.length === 1 ? "employee" : "employees",
+      recordLabel: counts.zinghr === 1 ? "employee" : "employees",
 
       fields: [
         "Employee ID",
@@ -49,14 +71,13 @@ export function getDataSourceSummary(): DataSourceSummary[] {
 
       question: "WHAT ACTUALLY HAPPENED?",
 
-      description:
-        "Historical employee effort used to understand actual utilization.",
+      description: famstackDescription,
 
-      recordCount: famstack.length,
+      recordCount: counts.famstack,
 
-      recordLabel: famstack.length === 1 ? "record" : "records",
+      recordLabel: counts.famstack === 1 ? "record" : "records",
 
-      period: "Jan–Aug 2026",
+      period: isOrganization ? "From Azure SQL" : "Jan–Aug 2026",
 
       fields: [
         "Employee ID",
@@ -81,14 +102,13 @@ export function getDataSourceSummary(): DataSourceSummary[] {
 
       question: "WHAT IS PLANNED?",
 
-      description:
-        "Monthly planned project effort used to understand current and future utilization.",
+      description: projectTrackDescription,
 
-      recordCount: projectTrack.length,
+      recordCount: counts.projectTrack,
 
-      recordLabel: projectTrack.length === 1 ? "record" : "records",
+      recordLabel: counts.projectTrack === 1 ? "record" : "records",
 
-      period: "Sep–Dec 2026",
+      period: isOrganization ? "From Azure SQL" : "Sep–Dec 2026",
 
       fields: [
         "Proposal Number",
@@ -119,9 +139,9 @@ export function getDataSourceSummary(): DataSourceSummary[] {
       description:
         "Defines standard monthly capacity using working days and hours per day.",
 
-      recordCount: capacityConfig.length,
+      recordCount: counts.capacityConfig,
 
-      recordLabel: capacityConfig.length === 1 ? "record" : "records",
+      recordLabel: counts.capacityConfig === 1 ? "record" : "records",
 
       fields: [
         "Country",
@@ -139,27 +159,39 @@ export function getDataSourceSummary(): DataSourceSummary[] {
   ];
 }
 
-export function getDataStatusRows(): DataStatusRow[] {
+export function getDataStatusRows(mode: ResourceDataMode = "mock"): DataStatusRow[] {
+  const isOrganization = mode === "organization";
+
   return [
     {
       source: "ZingHR",
       purpose: "Employee master",
-      pocData: "Synthetic",
-      productionIntegration: "Integration pending",
+      pocData: isOrganization ? "Derived from Azure SQL sources" : "Synthetic",
+      productionIntegration: isOrganization
+        ? "Live derivation (no ZingHR table in scope)"
+        : "Integration pending",
     },
 
     {
       source: "Famstack",
       purpose: "Historical actuals",
-      pocData: "Synthetic",
-      productionIntegration: "Integration pending",
+      pocData: isOrganization
+        ? "Azure SQL (billable + non-billable)"
+        : "Synthetic",
+      productionIntegration: isOrganization
+        ? "Connected via Resource Vision API"
+        : "Integration pending",
     },
 
     {
       source: "Project Track",
       purpose: "Current/future planned effort",
-      pocData: "Synthetic/schema-aligned POC dataset",
-      productionIntegration: "Integration pending",
+      pocData: isOrganization
+        ? "Azure SQL (project_track_proposals_table)"
+        : "Synthetic/schema-aligned POC dataset",
+      productionIntegration: isOrganization
+        ? "Connected via Resource Vision API"
+        : "Integration pending",
     },
 
     {

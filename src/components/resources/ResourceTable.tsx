@@ -10,7 +10,7 @@ import type {
   ResourceTableRow,
 } from "../../types/resources";
 
-import { RESOURCE_OUTLOOK_MONTHS } from "../../services/resourcesService";
+import { getResourcePlanningMonths } from "../../services/resourcesService";
 
 import {
   formatHours,
@@ -91,7 +91,7 @@ function SortHeader({
       type="button"
       onClick={() => onSort(field)}
       aria-label={`Sort ${label}. Currently ${directionLabel}.`}
-      className={`inline-flex items-center gap-1 rounded-md text-xs font-semibold uppercase tracking-wide text-slate-500 outline-none hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-600 ${
+      className={`inline-flex items-center gap-1.5 rounded-md text-xs font-semibold uppercase tracking-wide text-slate-600 outline-none hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-blue-600 ${
         align === "right" ? "justify-end" : ""
       }`}
     >
@@ -103,9 +103,11 @@ function SortHeader({
 }
 
 function OutlookCell({ row }: { row: ResourceTableRow }) {
+  const outlookMonths = getResourcePlanningMonths();
+
   return (
     <div className="flex min-w-72 gap-1.5">
-      {RESOURCE_OUTLOOK_MONTHS.map((monthKey) => {
+      {outlookMonths.map((monthKey) => {
         const month = row.outlook[monthKey];
 
         return (

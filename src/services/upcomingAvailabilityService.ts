@@ -161,3 +161,48 @@ export function getUpcomingAvailabilityTransitions(
     return right.additionalAvailableHours - left.additionalAvailableHours;
   });
 }
+
+export function isBecomingFullyAvailableTransition(
+  transition: AvailabilityTransition,
+): boolean {
+  return transition.transitionTypes.includes("BECAME_FULLY_AVAILABLE");
+}
+
+export function getPositiveCapacityTransitionsForMonth(
+  transitions: AvailabilityTransition[],
+  monthKey: string,
+): AvailabilityTransition[] {
+  return transitions.filter(
+    (transition) =>
+      transition.toMonthKey === monthKey &&
+      transition.additionalAvailableHours > 0,
+  );
+}
+
+export function partitionUpcomingAvailabilityTransitions(
+  transitions: AvailabilityTransition[],
+): {
+  fullyAvailable: AvailabilityTransition[];
+  partiallyAvailable: AvailabilityTransition[];
+} {
+  const fullyAvailable: AvailabilityTransition[] = [];
+  const partiallyAvailable: AvailabilityTransition[] = [];
+
+  for (const transition of transitions) {
+    if (isBecomingFullyAvailableTransition(transition)) {
+      fullyAvailable.push(transition);
+    } else {
+      partiallyAvailable.push(transition);
+    }
+  }
+
+  const byGain = (
+    left: AvailabilityTransition,
+    right: AvailabilityTransition,
+  ) => right.additionalAvailableHours - left.additionalAvailableHours;
+
+  fullyAvailable.sort(byGain);
+  partiallyAvailable.sort(byGain);
+
+  return { fullyAvailable, partiallyAvailable };
+}

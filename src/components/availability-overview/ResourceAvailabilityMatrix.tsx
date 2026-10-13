@@ -6,22 +6,31 @@ import type {
   ResourceMatrixSortField,
 } from "../../types/resourceAvailabilityMatrix";
 
-import { getCurrentMonthKey } from "../../services/monthService";
-
 import { formatMonthShort } from "../../utils/formatters";
 
 import { ResourceAvailabilityRow } from "./ResourceAvailabilityRow";
 
 import { Card } from "../ui/Card";
+import type { TablePaginationProps } from "../ui/TablePagination";
+import { TablePagination } from "../ui/TablePagination";
 
 interface ResourceAvailabilityMatrixProps {
   rows: ResourceAvailabilityMatrixRow[];
 
   monthKeys: string[];
 
+  /** Highlights the focus month column (defaults to first visible month). */
+  highlightMonthKey?: string;
+
   sort: ResourceMatrixSort;
 
   onSort: (field: ResourceMatrixSortField) => void;
+
+  pagination?: Omit<TablePaginationProps, "itemLabel">;
+
+  selectedEmployeeId?: string | null;
+
+  onSelectEmployee?: (employeeId: string) => void;
 }
 
 function getMonthYear(monthKey: string): string {
@@ -65,8 +74,8 @@ function SortHeader({
     <button
       type="button"
       onClick={() => onSort(field)}
-      className={`inline-flex items-center gap-1 rounded text-[10px] font-semibold uppercase tracking-[0.06em] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 ${
-        active ? "text-slate-700" : "text-slate-500 hover:text-slate-800"
+      className={`inline-flex items-center gap-1.5 rounded text-xs font-semibold uppercase tracking-wide outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 ${
+        active ? "text-slate-800" : "text-slate-600 hover:text-slate-900"
       } ${align === "center" ? "justify-center" : ""}`}
     >
       {label}
@@ -79,24 +88,34 @@ function SortHeader({
 export function ResourceAvailabilityMatrix({
   rows,
   monthKeys,
+  highlightMonthKey,
   sort,
   onSort,
+  pagination,
+  selectedEmployeeId = null,
+  onSelectEmployee,
 }: ResourceAvailabilityMatrixProps) {
-  const currentMonth = getCurrentMonthKey();
+  const focusMonthKey = highlightMonthKey ?? monthKeys[0];
+
+  const minTableWidth =
+    520 + Math.max(monthKeys.length, 1) * 140;
 
   return (
     <Card padding={false}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1080px] table-fixed border-collapse text-sm">
+        <table
+          className="w-full table-fixed border-collapse text-sm leading-normal"
+          style={{ minWidth: `${minTableWidth}px` }}
+        >
           <colgroup>
-            <col className="w-[230px]" />
+            <col className="w-[min(220px,22%)]" />
 
-            <col className="w-[255px]" />
+            <col className="w-[min(240px,24%)]" />
 
-            <col className="w-[120px]" />
+            <col className="w-[min(100px,10%)]" />
 
             {monthKeys.map((monthKey) => (
-              <col key={monthKey} className="w-[112px]" />
+              <col key={monthKey} />
             ))}
           </colgroup>
 
@@ -122,7 +141,7 @@ export function ResourceAvailabilityMatrix({
                 scope="col"
                 className="w-[255px] border-b border-slate-200 px-4 py-3.5 text-left"
               >
-                <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-500">
+                <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
                   Projects
                 </span>
               </th>
@@ -147,18 +166,18 @@ export function ResourceAvailabilityMatrix({
                 <th
                   key={monthKey}
                   scope="col"
-                  className={`w-28 border-b px-2 py-2.5 text-center ${
-                    monthKey === currentMonth
-                      ? "border-blue-200 bg-blue-100"
-                      : "border-slate-200"
+                  className={`border-b px-2 py-2.5 text-center ${
+                    monthKey === focusMonthKey
+                      ? "border-blue-200/80 bg-blue-50/90"
+                      : "border-slate-200 bg-slate-50/90"
                   }`}
                 >
                   <div className="flex flex-col items-center justify-center">
-                    <span className="text-[11px] font-semibold uppercase leading-none tracking-wide text-slate-700">
+                    <span className="text-[11px] font-semibold uppercase leading-tight tracking-wide text-slate-800">
                       {formatMonthShort(monthKey)}
                     </span>
 
-                    <span className="mt-1.5 text-[9px] font-medium leading-none text-slate-400">
+                    <span className="mt-0.5 text-[10px] font-medium leading-tight text-slate-500">
                       {getMonthYear(monthKey)}
                     </span>
                   </div>
@@ -173,13 +192,24 @@ export function ResourceAvailabilityMatrix({
                 key={row.employeeId}
                 row={row}
                 monthKeys={monthKeys}
+                highlightMonthKey={focusMonthKey}
+                isSelected={selectedEmployeeId === row.employeeId}
+                onSelect={
+                  onSelectEmployee === undefined
+                    ? undefined
+                    : () => onSelectEmployee(row.employeeId)
+                }
               />
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-100 bg-slate-50/40 px-4 py-3">
+      {pagination !== undefined && (
+        <TablePagination {...pagination} itemLabel="resources" />
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2.5 border-t border-slate-100 bg-slate-50/40 px-5 py-3.5">
         <LegendItem
           className="border-emerald-200 bg-emerald-50"
           label="Available"
@@ -200,7 +230,7 @@ export function ResourceAvailabilityMatrix({
           label="Over-Allocated"
         />
 
-        <span className="ml-auto text-[10px] text-slate-400">
+        <span className="ml-auto text-xs leading-5 text-slate-600">
           Hours shown are available capacity
         </span>
       </div>
@@ -222,7 +252,7 @@ function LegendItem({
         aria-hidden="true"
       />
 
-      <span className="text-[10px] font-medium text-slate-500">{label}</span>
+      <span className="text-xs font-medium text-slate-600">{label}</span>
     </div>
   );
 }

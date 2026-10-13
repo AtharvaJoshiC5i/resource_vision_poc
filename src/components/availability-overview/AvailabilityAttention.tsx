@@ -1,66 +1,30 @@
-import {
-  AlertTriangle,
-  ArrowDownRight,
-} from "lucide-react";
+import { useMemo, useState } from "react";
 
-import {
-  Link,
-} from "react-router-dom";
+import { AlertTriangle } from "lucide-react";
 
-import type {
-  AvailabilityAttentionItem,
-} from "../../types/availabilityAttention";
+import type { AvailabilityAttentionItem } from "../../types/availabilityAttention";
 
-import {
-  formatHours,
-  formatMonth,
-} from "../../utils/formatters";
+import { getAvailabilityAttentionMonthSummaries } from "../../services/availabilityAttentionService";
 
-import {
-  Card,
-} from "../ui/Card";
+import { formatHours, formatMonth } from "../../utils/formatters";
+
+import { Card } from "../ui/Card";
+
+import { AvailabilityAttentionMonthModal } from "./AvailabilityAttentionMonthModal";
 
 interface AvailabilityAttentionProps {
-  items:
-    AvailabilityAttentionItem[];
-
-  maxRows?: number;
+  items: AvailabilityAttentionItem[];
 }
 
-function getDescription(
-  item:
-    AvailabilityAttentionItem,
-): string {
-  switch (item.type) {
-    case "OVER_ALLOCATED":
-      return `${formatHours(
-        item.overAllocatedHours,
-      )} over capacity`;
+export function AvailabilityAttention({ items }: AvailabilityAttentionProps) {
+  const [selectedMonthKey, setSelectedMonthKey] = useState<string | null>(
+    null,
+  );
 
-    case "BECOMING_OVER_ALLOCATED":
-      return `Becomes over-allocated`;
-
-    case "BECOMING_FULLY_ALLOCATED":
-      return "Becomes fully allocated";
-
-    case "CAPACITY_REDUCTION":
-      return `${formatHours(
-        Math.abs(
-          item.changeHours ?? 0,
-        ),
-      )} less capacity`;
-  }
-}
-
-export function AvailabilityAttention({
-  items,
-  maxRows = 6,
-}: AvailabilityAttentionProps) {
-  const visible =
-    items.slice(
-      0,
-      maxRows,
-    );
+  const summaries = useMemo(
+    () => getAvailabilityAttentionMonthSummaries(items),
+    [items],
+  );
 
   return (
     <Card padding={false}>
@@ -74,88 +38,113 @@ export function AvailabilityAttention({
         </div>
 
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">
-            Attention
-          </h2>
+          <h2 className="text-sm font-semibold text-slate-900">Attention</h2>
 
           <p className="mt-1 text-xs text-slate-500">
-            Capacity reductions and allocation risks within the planning horizon.
+            Capacity reductions and allocation risks by month within the
+            planning horizon.
           </p>
         </div>
       </div>
 
-      {visible.length === 0 ? (
+      {summaries.length === 0 ? (
         <div className="px-5 py-8 text-center">
           <p className="text-sm font-medium text-slate-700">
             No availability risks
           </p>
 
           <p className="mt-1 text-xs text-slate-500">
-            No over-allocation or capacity reductions require attention in this planning horizon.
+            No over-allocation or capacity reductions require attention in this
+            planning horizon.
           </p>
         </div>
       ) : (
-        <div className="divide-y divide-slate-100">
-          {visible.map(
-            (item) => (
-              <div
-                key={`${item.employeeId}-${item.monthKey}-${item.type}`}
-                className="flex items-center justify-between gap-4 px-5 py-3.5"
-              >
-                <div className="min-w-0">
-                  <Link
-                    to={`/resources/${encodeURIComponent(
-                      item.employeeId,
-                    )}`}
-                    className="rounded text-xs font-semibold text-slate-900 outline-none hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600"
-                  >
-                    {
-                      item.employeeName
-                    }
-                  </Link>
+        <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+          {summaries.map((summary) => (
+            <button
+              key={summary.monthKey}
+              type="button"
+              onClick={() => setSelectedMonthKey(summary.monthKey)}
+              aria-label={`View availability risks in ${formatMonth(summary.monthKey)}`}
+              className="cursor-pointer rounded-lg border border-slate-200 bg-slate-50/40 px-4 py-4 text-left outline-none transition-colors hover:border-amber-200 hover:bg-amber-50/30 focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-2"
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-xs font-semibold text-slate-900">
+                  {formatMonth(summary.monthKey)}
+                </p>
 
-                  <p className="mt-1 truncate text-[10px] text-slate-500">
-                    {
-                      item.primaryCapability
-                    }
-                    {" · "}
-                    {item.grade}
-                    {" · "}
-                    {formatMonth(
-                      item.monthKey,
-                    )}
-                  </p>
-                </div>
-
-                <div className="shrink-0 text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <ArrowDownRight
-                      className="size-3 text-amber-600"
-                      aria-hidden="true"
-                    />
-
-                    <p className="text-xs font-semibold text-slate-700">
-                      {getDescription(
-                        item,
-                      )}
-                    </p>
-                  </div>
-
-                  {item.currentAvailableHours <
-                    0 && (
-                    <p className="mt-1 text-[10px] font-medium text-red-600">
-                      {formatHours(
-                        item.currentAvailableHours,
-                      )}{" "}
-                      available
-                    </p>
-                  )}
-                </div>
+                <span className="text-[11px] text-slate-400">Review</span>
               </div>
-            ),
-          )}
+
+              <div className="grid grid-cols-3 gap-3">
+                <Metric
+                  value={summary.resourcesAffected.toLocaleString("en-US")}
+                  label="Resources affected"
+                />
+
+                <Metric
+                  value={
+                    summary.lostCapacityHours > 0
+                      ? formatHours(summary.lostCapacityHours)
+                      : "—"
+                  }
+                  label="Capacity lost"
+                  emphasis={summary.lostCapacityHours > 0}
+                />
+
+                <Metric
+                  value={(
+                    summary.becomingFullyAllocatedCount +
+                    summary.overAllocatedCount +
+                    summary.capacityReductionCount
+                  ).toLocaleString("en-US")}
+                  label="Risk signals"
+                />
+              </div>
+            </button>
+          ))}
         </div>
       )}
+
+      {selectedMonthKey !== null && (
+        <AvailabilityAttentionMonthModal
+          monthKey={selectedMonthKey}
+          items={items}
+          onClose={() => setSelectedMonthKey(null)}
+        />
+      )}
+
+      <div className="border-t border-slate-100 bg-slate-50/40 px-5 py-3">
+        <p className="text-[11px] leading-5 text-slate-500">
+          Click a month to see who is over-allocated, becoming fully booked, or
+          losing available hours. Risk signals count individual issues (one
+          person may appear in more than one category).
+        </p>
+      </div>
     </Card>
+  );
+}
+
+function Metric({
+  value,
+  label,
+  emphasis = false,
+}: {
+  value: string;
+  label: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <p
+        className={`text-base font-semibold tabular-nums ${
+          emphasis ? "text-amber-700" : "text-slate-900"
+        }`}
+      >
+        {value}
+      </p>
+
+      <p className="mt-1 text-[11px] leading-4 text-slate-500">{label}</p>
+    </div>
   );
 }

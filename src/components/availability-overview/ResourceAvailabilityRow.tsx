@@ -1,10 +1,10 @@
+import type { KeyboardEvent } from "react";
+
 import { ArrowUpRight } from "lucide-react";
 
 import { Link } from "react-router-dom";
 
 import type { ResourceAvailabilityMatrixRow } from "../../types/resourceAvailabilityMatrix";
-
-import { getCurrentMonthKey } from "../../services/monthService";
 
 import { formatMonth } from "../../utils/formatters";
 
@@ -14,6 +14,12 @@ interface ResourceAvailabilityRowProps {
   row: ResourceAvailabilityMatrixRow;
 
   monthKeys: string[];
+
+  highlightMonthKey?: string;
+
+  isSelected?: boolean;
+
+  onSelect?: () => void;
 }
 
 function formatAllocatedUntil(value: string | undefined): string {
@@ -98,26 +104,60 @@ function getForwardSignal(row: ResourceAvailabilityMatrixRow): string | null {
 export function ResourceAvailabilityRow({
   row,
   monthKeys,
+  highlightMonthKey,
+  isSelected = false,
+  onSelect,
 }: ResourceAvailabilityRowProps) {
   const projects = getProjectSummary(row);
 
   const forwardSignal = getForwardSignal(row);
-  const currentMonth = getCurrentMonthKey();
+  const focusMonthKey = highlightMonthKey ?? monthKeys[0];
+  const selectable = onSelect !== undefined;
+
+  function handleRowClick() {
+    onSelect?.();
+  }
+
+  function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>) {
+    if (!selectable) {
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onSelect?.();
+    }
+  }
 
   return (
-    <tr className="group transition-colors hover:bg-slate-50/80">
+    <tr
+      className={`group transition-colors ${
+        isSelected
+          ? "bg-blue-50/60 hover:bg-blue-50/70"
+          : "hover:bg-slate-50/80"
+      } ${selectable ? "cursor-pointer" : ""}`}
+      onClick={selectable ? handleRowClick : undefined}
+      onKeyDown={selectable ? handleRowKeyDown : undefined}
+      tabIndex={selectable ? 0 : undefined}
+      aria-selected={selectable ? isSelected : undefined}
+    >
       {/* Resource */}
 
       <th
         scope="row"
-        className="sticky left-0 z-10 w-[230px] min-w-[230px] border-b border-r border-slate-100 bg-white px-4 py-3 text-left align-middle group-hover:bg-slate-50"
+        className={`sticky left-0 z-10 w-[230px] min-w-[230px] border-b border-r border-slate-100 px-4 py-3.5 text-left align-middle ${
+          isSelected
+            ? "border-l-2 border-l-blue-600 bg-blue-50/60 group-hover:bg-blue-50/70"
+            : "border-l-2 border-l-transparent bg-white group-hover:bg-slate-50"
+        }`}
       >
         <Link
           to={`/resources/${encodeURIComponent(row.employeeId)}`}
+          onClick={(event) => event.stopPropagation()}
           className="group/link block rounded-md outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
         >
           <div className="flex items-center gap-1.5">
-            <span className="truncate text-[13px] font-semibold text-slate-900 group-hover/link:text-blue-700">
+            <span className="truncate text-xs font-semibold text-slate-900 group-hover/link:text-blue-700">
               {row.employeeName}
             </span>
 
@@ -127,14 +167,14 @@ export function ResourceAvailabilityRow({
             />
           </div>
 
-          <p className="mt-1 truncate text-[10px] font-normal leading-none text-slate-400">
+          <p className="mt-0.5 truncate text-[11px] leading-5 text-slate-500">
             {row.employeeId}
             {" · "}
             {row.location}
           </p>
 
           {forwardSignal !== null && (
-            <p className="mt-2 truncate text-[10px] font-medium leading-none text-blue-600">
+            <p className="mt-1.5 truncate text-xs font-medium leading-5 text-blue-700">
               {forwardSignal}
             </p>
           )}
@@ -143,18 +183,18 @@ export function ResourceAvailabilityRow({
 
       {/* Projects */}
 
-      <td className="w-[255px] min-w-[255px] border-b border-slate-100 px-4 py-3 align-middle">
+      <td className="w-[255px] min-w-[255px] border-b border-slate-100 px-4 py-3.5 align-middle">
         <div title={projects.title} className="max-w-[220px]">
           <p
-            className={`truncate text-xs font-medium ${
-              row.projects.length === 0 ? "text-slate-400" : "text-slate-700"
+            className={`truncate text-xs font-medium leading-5 ${
+              row.projects.length === 0 ? "text-slate-500" : "text-slate-800"
             }`}
           >
             {projects.primary}
           </p>
 
           {projects.secondary !== undefined && (
-            <p className="mt-1 text-[10px] font-medium leading-none text-slate-400">
+            <p className="mt-1 text-xs font-medium leading-5 text-slate-500">
               {projects.secondary}
             </p>
           )}
@@ -163,8 +203,8 @@ export function ResourceAvailabilityRow({
 
       {/* Allocated Until */}
 
-      <td className="w-[120px] min-w-[120px] border-b border-r border-slate-100 px-4 py-3 text-left align-middle">
-        <span className="whitespace-nowrap text-xs font-medium text-slate-600">
+      <td className="w-[120px] min-w-[120px] border-b border-r border-slate-100 px-4 py-3.5 text-left align-middle">
+        <span className="whitespace-nowrap text-xs font-medium text-slate-700">
           {formatAllocatedUntil(row.allocatedUntil)}
         </span>
       </td>
@@ -179,10 +219,8 @@ export function ResourceAvailabilityRow({
         return (
           <td
             key={monthKey}
-            className={`w-[112px] min-w-[112px] border-b border-slate-100 px-2 py-2.5 align-middle ${
-              monthKey === currentMonth
-                ? "bg-blue-50/70"
-                : ""
+            className={`border-b border-slate-100 px-2 py-2 align-middle ${
+              monthKey === focusMonthKey ? "bg-blue-50/40" : ""
             }`}
           >
             <AvailabilityMonthCell

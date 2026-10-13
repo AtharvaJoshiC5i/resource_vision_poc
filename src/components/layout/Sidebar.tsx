@@ -60,7 +60,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         <div className="space-y-7">
           {navigationSections.map((section) => (
             <div key={section.label}>
-              <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {section.label}
               </p>
 
@@ -79,10 +79,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
                       to={item.path}
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
                         active
-                          ? "bg-blue-50 text-blue-700"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          ? "bg-blue-50 text-blue-800"
+                          : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
                       }`}
                     >
                       <Icon
@@ -111,7 +111,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             Proof of Concept
           </p>
 
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-slate-600">
             Synthetic demonstration data
           </p>
         </div>

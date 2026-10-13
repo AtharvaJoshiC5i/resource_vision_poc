@@ -4,12 +4,17 @@ import type {
 
 import type {
   AvailabilityAttentionItem,
+  AvailabilityAttentionMonthSummary,
   UpcomingAvailabilityMonthSummary,
 } from "../types/availabilityAttention";
 
 import {
   compareMonthKeys,
 } from "./monthService";
+
+import {
+  formatHours,
+} from "../utils/formatters";
 
 function groupByEmployee(
   records:
@@ -146,6 +151,146 @@ export function getUpcomingAvailabilityMonthSummaries(
         right.monthKey,
       ),
   );
+}
+
+export function describeAvailabilityAttentionItem(
+  item: AvailabilityAttentionItem,
+): string {
+  switch (item.type) {
+    case "OVER_ALLOCATED":
+      return `${formatHours(item.overAllocatedHours)} over capacity`;
+
+    case "BECOMING_OVER_ALLOCATED":
+      return "Becomes over-allocated";
+
+    case "BECOMING_FULLY_ALLOCATED":
+      return "Becomes fully allocated";
+
+    case "CAPACITY_REDUCTION":
+      return `${formatHours(
+        Math.abs(item.changeHours ?? 0),
+      )} less capacity`;
+  }
+}
+
+export function getAvailabilityAttentionMonthSummaries(
+  items: AvailabilityAttentionItem[],
+): AvailabilityAttentionMonthSummary[] {
+  const buckets = new Map<
+    string,
+    {
+      employeeIds: Set<string>;
+      lostCapacityHours: number;
+      becomingFullyAllocatedCount: number;
+      overAllocatedCount: number;
+      capacityReductionCount: number;
+    }
+  >();
+
+  for (const item of items) {
+    const existing =
+      buckets.get(item.monthKey) ?? {
+        employeeIds: new Set<string>(),
+        lostCapacityHours: 0,
+        becomingFullyAllocatedCount: 0,
+        overAllocatedCount: 0,
+        capacityReductionCount: 0,
+      };
+
+    existing.employeeIds.add(item.employeeId);
+
+    if (item.changeHours !== undefined && item.changeHours < 0) {
+      existing.lostCapacityHours += Math.abs(item.changeHours);
+    }
+
+    switch (item.type) {
+      case "BECOMING_FULLY_ALLOCATED":
+        existing.becomingFullyAllocatedCount += 1;
+        break;
+
+      case "OVER_ALLOCATED":
+      case "BECOMING_OVER_ALLOCATED":
+        existing.overAllocatedCount += 1;
+        break;
+
+      case "CAPACITY_REDUCTION":
+        existing.capacityReductionCount += 1;
+        break;
+    }
+
+    buckets.set(item.monthKey, existing);
+  }
+
+  return [...buckets.entries()]
+    .map(([monthKey, bucket]) => ({
+      monthKey,
+      resourcesAffected: bucket.employeeIds.size,
+      lostCapacityHours: bucket.lostCapacityHours,
+      becomingFullyAllocatedCount: bucket.becomingFullyAllocatedCount,
+      overAllocatedCount: bucket.overAllocatedCount,
+      capacityReductionCount: bucket.capacityReductionCount,
+    }))
+    .sort((left, right) =>
+      compareMonthKeys(left.monthKey, right.monthKey),
+    );
+}
+
+export function getAvailabilityAttentionItemsForMonth(
+  items: AvailabilityAttentionItem[],
+  monthKey: string,
+): AvailabilityAttentionItem[] {
+  return items.filter((item) => item.monthKey === monthKey);
+}
+
+export function partitionAvailabilityAttentionItems(
+  items: AvailabilityAttentionItem[],
+): {
+  overAllocated: AvailabilityAttentionItem[];
+  becomingOverAllocated: AvailabilityAttentionItem[];
+  becomingFullyAllocated: AvailabilityAttentionItem[];
+  capacityReductions: AvailabilityAttentionItem[];
+} {
+  const overAllocated: AvailabilityAttentionItem[] = [];
+  const becomingOverAllocated: AvailabilityAttentionItem[] = [];
+  const becomingFullyAllocated: AvailabilityAttentionItem[] = [];
+  const capacityReductions: AvailabilityAttentionItem[] = [];
+
+  for (const item of items) {
+    switch (item.type) {
+      case "OVER_ALLOCATED":
+        overAllocated.push(item);
+        break;
+
+      case "BECOMING_OVER_ALLOCATED":
+        becomingOverAllocated.push(item);
+        break;
+
+      case "BECOMING_FULLY_ALLOCATED":
+        becomingFullyAllocated.push(item);
+        break;
+
+      case "CAPACITY_REDUCTION":
+        capacityReductions.push(item);
+        break;
+    }
+  }
+
+  const bySeverity = (
+    left: AvailabilityAttentionItem,
+    right: AvailabilityAttentionItem,
+  ) => left.currentAvailableHours - right.currentAvailableHours;
+
+  overAllocated.sort(bySeverity);
+  becomingOverAllocated.sort(bySeverity);
+  becomingFullyAllocated.sort(bySeverity);
+  capacityReductions.sort(bySeverity);
+
+  return {
+    overAllocated,
+    becomingOverAllocated,
+    becomingFullyAllocated,
+    capacityReductions,
+  };
 }
 
 export function getAvailabilityAttentionItems(

@@ -38,8 +38,8 @@ const DIMENSIONS: ResourceDimension[] = [
   "secondaryCapability",
   "department",
   "grade",
-  "location",
   "country",
+  "location",
 ];
 
 export function ActiveFilterSummary({

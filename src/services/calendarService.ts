@@ -1,12 +1,24 @@
 import type { Employee, WorkforceState, WorkCalendar } from "../types/domain";
 
+import {
+  DEFAULT_HOURS_PER_DAY,
+  DEFAULT_WORKING_DAYS_PER_MONTH,
+  UNSPECIFIED_GEO_LABEL,
+} from "../constants/capacityFallback";
+
 import { parseMonthKey } from "./monthService";
 
-function parseIsoDate(value: string): number {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+function tryParseIsoDate(value: string): number | null {
+  const trimmed = value.trim();
+
+  if (trimmed === "") {
+    return null;
+  }
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
 
   if (match === null) {
-    throw new Error(`Invalid employee date: ${value}`);
+    return null;
   }
 
   const year = Number(match[1]);
@@ -25,7 +37,7 @@ function parseIsoDate(value: string): number {
     date.getUTCDate() === day;
 
   if (!valid) {
-    throw new Error(`Invalid employee date: ${value}`);
+    return null;
   }
 
   return timestamp;
@@ -50,18 +62,23 @@ export function getWorkforceState(
 ): WorkforceState {
   const { start, end } = getMonthBounds(monthKey);
 
-  const joiningDate = parseIsoDate(employee.dateOfJoining);
+  /*
+   * Derived organization employees may not have a join date.
+   * An empty join date is treated as "unknown" and does not
+   * exclude the employee from the planning horizon.
+   */
+  const joiningDate = tryParseIsoDate(employee.dateOfJoining);
 
-  if (joiningDate > end) {
+  if (joiningDate !== null && joiningDate > end) {
     return "NOT_JOINED";
   }
 
-  if (
-    employee.lastWorkingDate !== undefined &&
-    employee.lastWorkingDate.trim() !== "" &&
-    parseIsoDate(employee.lastWorkingDate) < start
-  ) {
-    return "EXITED";
+  if (employee.lastWorkingDate !== undefined) {
+    const leavingDate = tryParseIsoDate(employee.lastWorkingDate);
+
+    if (leavingDate !== null && leavingDate < start) {
+      return "EXITED";
+    }
   }
 
   return "ACTIVE";
@@ -95,7 +112,7 @@ export function buildWorkCalendarLookup(
     );
 
     if (lookup.has(key)) {
-      throw new Error(`Duplicate work calendar entry: ${key}`);
+      continue;
     }
 
     lookup.set(key, record);
@@ -104,26 +121,100 @@ export function buildWorkCalendarLookup(
   return lookup;
 }
 
-export function getWorkCalendar(
-  lookup: Map<string, WorkCalendar>,
+function normalizeGeoLabel(value: string): string {
+  const trimmed = value.trim();
 
+  return trimmed === "" ? UNSPECIFIED_GEO_LABEL : trimmed;
+}
+
+function createFallbackWorkCalendar(
   country: string,
-
   location: string,
-
   monthKey: string,
 ): WorkCalendar {
-  const key = createCalendarKey(country, location, monthKey);
+  const workingDays = DEFAULT_WORKING_DAYS_PER_MONTH;
+  const hoursPerDay = DEFAULT_HOURS_PER_DAY;
 
-  const calendar = lookup.get(key);
+  return {
+    country,
+    location,
+    monthKey,
+    workingDays,
+    hoursPerDay,
+    monthlyCapacity: workingDays * hoursPerDay,
+  };
+}
 
-  if (calendar === undefined) {
-    throw new Error(
-      `Missing work calendar for ${country}, ${location}, ${monthKey}.`,
-    );
+export interface ResolvedWorkCalendar {
+  calendar: WorkCalendar;
+  usedFallback: boolean;
+}
+
+export function resolveWorkCalendar(
+  lookup: Map<string, WorkCalendar>,
+  country: string,
+  location: string,
+  monthKey: string,
+): ResolvedWorkCalendar {
+  const normalizedCountry = normalizeGeoLabel(country);
+  const normalizedLocation = normalizeGeoLabel(location);
+
+  const exact = lookup.get(
+    createCalendarKey(normalizedCountry, normalizedLocation, monthKey),
+  );
+
+  if (exact !== undefined) {
+    return { calendar: exact, usedFallback: false };
   }
 
-  return calendar;
+  const sameCountryMonth = [...lookup.values()].find(
+    (entry) =>
+      entry.country === normalizedCountry && entry.monthKey === monthKey,
+  );
+
+  if (sameCountryMonth !== undefined) {
+    return {
+      calendar: {
+        ...sameCountryMonth,
+        country: normalizedCountry,
+        location: normalizedLocation,
+      },
+      usedFallback: true,
+    };
+  }
+
+  const sameMonth = [...lookup.values()].find(
+    (entry) => entry.monthKey === monthKey,
+  );
+
+  if (sameMonth !== undefined) {
+    return {
+      calendar: {
+        ...sameMonth,
+        country: normalizedCountry,
+        location: normalizedLocation,
+      },
+      usedFallback: true,
+    };
+  }
+
+  return {
+    calendar: createFallbackWorkCalendar(
+      normalizedCountry,
+      normalizedLocation,
+      monthKey,
+    ),
+    usedFallback: true,
+  };
+}
+
+export function getWorkCalendar(
+  lookup: Map<string, WorkCalendar>,
+  country: string,
+  location: string,
+  monthKey: string,
+): WorkCalendar {
+  return resolveWorkCalendar(lookup, country, location, monthKey).calendar;
 }
 
 export function calculateEmployeeCapacity(

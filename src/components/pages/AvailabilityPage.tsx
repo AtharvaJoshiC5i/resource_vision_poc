@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 
 import { CalendarRange } from "lucide-react";
 
-import { availabilityQueryContext } from "../../data";
+import { useResourceData } from "../../context/ResourceDataContext";
 
 import { POC_CURRENT_MONTH } from "../../constants/poc";
 
@@ -28,13 +28,19 @@ import {
 
 import { addMonths, getMonthRange } from "../../services/monthService";
 
+import { hasCalendarCoverage } from "../../utils/calendarCoverage";
+
 import type { ResourceDimension } from "../../types/resourceFilters";
+
+import {
+  buildDrillPathFromFilters,
+  drillIntoDimension,
+  drillToBreadcrumbIndex,
+} from "../../utils/dimensionDrill";
 
 import { useResourceFilters } from "../../hooks/useResourceFilters";
 
 import { AvailabilitySummaryCards } from "../availability-overview/AvailabilitySummaryCards";
-
-import { CapacitySummary } from "../availability-overview/CapacitySummary";
 
 import { ForwardAvailability } from "../availability-overview/ForwardAvailability";
 
@@ -42,13 +48,9 @@ import { PlanningHorizonControl } from "../availability-overview/PlanningHorizon
 
 import { UpcomingAvailability } from "../availability-overview/UpcomingAvailability";
 
-import { UpcomingResourceList } from "../availability-overview/UpcomingResourceList";
-
 import { AvailabilityAttention } from "../availability-overview/AvailabilityAttention";
 
 import { UpcomingResourcePreview } from "../availability-overview/UpcomingResourcePreview";
-
-import { ResourceReleaseForecast } from "../availability-overview/ResourceReleaseForecast";
 
 import { ActiveFilterSummary } from "../availability-filters/ActiveFilterSummary";
 
@@ -88,17 +90,15 @@ import { PageHeader } from "../ui/PageHeader";
 
 const PLANNING_HORIZON_MONTHS = 7;
 
-function hasCalendarCoverage(startMonth: string): boolean {
-  const requestedMonths = getMonthRange(startMonth, PLANNING_HORIZON_MONTHS);
+export function AvailabilityPage() {
+  const { availabilityQueryContext, loading, mode } = useResourceData();
 
-  const availableMonths = new Set(
-    availabilityQueryContext.workCalendar.map((record) => record.monthKey),
+  const calendarMonthKeys = useMemo(
+    () =>
+      availabilityQueryContext.workCalendar.map((record) => record.monthKey),
+    [availabilityQueryContext.workCalendar],
   );
 
-  return requestedMonths.every((monthKey) => availableMonths.has(monthKey));
-}
-
-export function AvailabilityPage() {
   const location = useLocation();
 
   const [startMonth, setStartMonth] = useState(POC_CURRENT_MONTH);
@@ -237,6 +237,11 @@ export function AvailabilityPage() {
     [filteredRecords, groupBy, selectedSummary],
   );
 
+  const dimensionDrillPath = useMemo(
+    () => buildDrillPathFromFilters(effectiveFilters),
+    [effectiveFilters],
+  );
+
   /**
    * Planning horizon navigation
    */
@@ -245,7 +250,9 @@ export function AvailabilityPage() {
   const nextStart = addMonths(startMonth, 1);
 
   function handleHorizonChange(next: string) {
-    if (!hasCalendarCoverage(next)) {
+    if (
+      !hasCalendarCoverage(next, PLANNING_HORIZON_MONTHS, calendarMonthKeys)
+    ) {
       return;
     }
 
@@ -264,23 +271,26 @@ export function AvailabilityPage() {
     });
   }
 
-  /**
-   * Dimension drill-down
-   */
-  function handleDimensionSelection(
-    dimension: ResourceDimension,
-    value: string,
-  ) {
-    const existing = filters[dimension];
+  function handleDimensionDrill(value: string) {
+    const { filters: drilledFilters, nextDimension } = drillIntoDimension(
+      effectiveFilters,
+      groupBy,
+      value,
+    );
 
-    if (existing.includes(value)) {
-      return;
+    setFilters(drilledFilters);
+
+    if (nextDimension !== null) {
+      setGroupBy(nextDimension);
     }
+  }
 
-    setFilters({
-      ...filters,
-      [dimension]: [...existing, value],
-    });
+  function handleDimensionDrillBreadcrumb(breadcrumbIndex: number) {
+    const { filters: drilledFilters, groupBy: nextGroupBy } =
+      drillToBreadcrumbIndex(effectiveFilters, breadcrumbIndex);
+
+    setFilters(drilledFilters);
+    setGroupBy(nextGroupBy);
   }
 
   /**
@@ -291,18 +301,35 @@ export function AvailabilityPage() {
   const hasFilteredResources = filteredRecords.length > 0;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {mode === "organization" && loading && (
+        <div
+          className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-900"
+          role="status"
+        >
+          Loading organization data from Azure SQL…
+        </div>
+      )}
+
       {/* Page header and planning horizon */}
       <PageHeader
         title="Resource Availability"
-        description="Current and forward-looking workforce capacity."
+        description="See how many hours each person can take on, month by month, after planned project effort."
         actions={
           <PlanningHorizonControl
             startMonth={startMonth}
             numberOfMonths={PLANNING_HORIZON_MONTHS}
             onChange={handleHorizonChange}
-            canGoPrevious={hasCalendarCoverage(previousStart)}
-            canGoNext={hasCalendarCoverage(nextStart)}
+            canGoPrevious={hasCalendarCoverage(
+              previousStart,
+              PLANNING_HORIZON_MONTHS,
+              calendarMonthKeys,
+            )}
+            canGoNext={hasCalendarCoverage(
+              nextStart,
+              PLANNING_HORIZON_MONTHS,
+              calendarMonthKeys,
+            )}
           />
         }
       />
@@ -387,42 +414,18 @@ export function AvailabilityPage() {
             dimension={groupBy}
             monthKey={selectedSummary.monthKey}
             rows={dimensionRows}
+            monthRecords={selectedRecords}
+            drillPath={dimensionDrillPath}
             onDimensionChange={setGroupBy}
-            onSelectValue={handleDimensionSelection}
+            onDrillInto={handleDimensionDrill}
+            onDrillBreadcrumb={handleDimensionDrillBreadcrumb}
           />
 
-          {/* Capacity composition and upcoming availability */}
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <CapacitySummary
-              summary={selectedSummary}
-              records={selectedRecords}
-            />
-
-            <UpcomingAvailability summaries={upcomingSummaries} />
-          </div>
-
-          {/*
-           * NEW: Resource Release Forecast
-           *
-           * Uses the existing filtered population.
-           *
-           * Shows:
-           * - Month of expected release
-           * - Resources releasing capacity
-           * - Additional available hours
-           * - Partial release count
-           * - Full release count
-           *
-           * No independent availability calculation
-           * is performed inside this page.
-           */}
-          <ResourceReleaseForecast
+          <UpcomingAvailability
+            summaries={upcomingSummaries}
+            transitions={transitions}
             records={filteredRecords}
-            focusMonth={effectiveFocusMonth}
           />
-
-          {/* Existing employee-level transitions */}
-          <UpcomingResourceList transitions={transitions} />
 
           {/* Existing availability attention */}
           <AvailabilityAttention items={attentionItems} />

@@ -17,9 +17,9 @@ export function EmptyState({
         <Icon className="size-5 text-slate-500" aria-hidden="true" />
       </div>
 
-      <h2 className="mt-4 text-sm font-semibold text-slate-900">{title}</h2>
+      <h2 className="mt-4 text-base font-semibold text-slate-900">{title}</h2>
 
-      <p className="mt-1.5 max-w-md text-sm leading-6 text-slate-500">
+      <p className="mt-2 max-w-md text-sm leading-7 text-slate-600">
         {description}
       </p>
     </div>

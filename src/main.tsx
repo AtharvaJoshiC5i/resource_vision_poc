@@ -5,6 +5,8 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 
+import { ResourceDataProvider } from "./context/ResourceDataContext";
+
 import { resourceMonthlyRecords, unassignedDemand } from "./data";
 
 import { logDataValidation } from "./utils/validateData";
@@ -85,7 +87,9 @@ if (rootElement === null) {
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <ResourceDataProvider>
+        <App />
+      </ResourceDataProvider>
     </BrowserRouter>
   </StrictMode>,
 );

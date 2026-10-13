@@ -1,5 +1,7 @@
 import { Info, ShieldCheck } from "lucide-react";
 
+import { useResourceData } from "../../context/ResourceDataContext";
+
 import {
   getDataSourceSummary,
   getDataStatusRows,
@@ -18,9 +20,25 @@ import { Card } from "../ui/Card";
 import { PageHeader } from "../ui/PageHeader";
 
 export function DataSourcesPage() {
-  const sources = getDataSourceSummary();
+  const {
+    mode,
+    famstack,
+    projectTrack,
+    zinghr,
+    capacityConfig,
+  } = useResourceData();
 
-  const statusRows = getDataStatusRows();
+  const sources = getDataSourceSummary(
+    {
+      zinghr: zinghr.length,
+      famstack: famstack.length,
+      projectTrack: projectTrack.length,
+      capacityConfig: capacityConfig.length,
+    },
+    mode,
+  );
+
+  const statusRows = getDataStatusRows(mode);
 
   const enterpriseSources = sources.filter(
     (source) => source.kind === "enterprise",
@@ -31,7 +49,7 @@ export function DataSourcesPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <PageHeader
         title="Data Sources"
         description="How Resource Vision combines employee, historical utilization and project planning data."
@@ -50,10 +68,12 @@ export function DataSourcesPage() {
                 Proof of Concept Data For Now
               </p>
 
-              <Badge variant="blue">Synthetic Data</Badge>
+              <Badge variant={mode === "mock" ? "blue" : "green"}>
+                {mode === "mock" ? "Synthetic Data" : "Azure SQL"}
+              </Badge>
             </div>
 
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+            <p className="mt-2 text-base leading-7 text-slate-600">
               This demonstration uses synthetic, schema-aligned datasets to
               validate the Resource Vision data model and availability
               calculations. Production integrations will replace these datasets
@@ -72,7 +92,7 @@ export function DataSourcesPage() {
             Source Systems
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1.5 text-base leading-7 text-slate-600">
             Three conceptual inputs establish who resources are, what happened
             historically and what is planned.
           </p>
@@ -85,7 +105,7 @@ export function DataSourcesPage() {
         </div>
 
         <div className="rounded-xl border border-amber-200 bg-amber-50/40 px-4 py-3">
-          <p className="text-xs leading-5 text-amber-900">
+          <p className="text-sm leading-6 text-amber-900">
             <span className="font-semibold">POC data contract:</span> Famstack
             and ZingHR field mappings shown here represent the POC data contract
             and will be aligned to authoritative source schemas during

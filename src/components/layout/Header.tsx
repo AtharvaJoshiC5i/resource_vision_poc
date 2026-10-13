@@ -1,6 +1,6 @@
 import { Menu } from "lucide-react";
 
-import { Badge } from "../ui/Badge";
+import { DataSourceModeControl } from "./DataSourceModeControl";
 
 interface HeaderProps {
   onOpenNavigation: () => void;
@@ -25,14 +25,7 @@ export function Header({ onOpenNavigation }: HeaderProps) {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <span
-            className="size-1.5 rounded-full bg-blue-600"
-            aria-hidden="true"
-          />
-
-          <Badge variant="neutral">Synthetic Data</Badge>
-        </div>
+        <DataSourceModeControl />
       </div>
     </header>
   );

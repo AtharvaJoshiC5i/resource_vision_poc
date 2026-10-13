@@ -1,14 +1,28 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SearchX } from "lucide-react";
 
-import { availabilityQueryContext } from "../../data";
+import { useResourceData } from "../../context/ResourceDataContext";
 
 import { POC_CURRENT_MONTH, PROJECT_TRACK_MONTHS } from "../../constants/poc";
 
-import { getAvailabilityForRange } from "../../services/availabilityQueryService";
+import {
+  getAvailabilityForMonthKeys,
+  getAvailabilityForRange,
+} from "../../services/availabilityQueryService";
 
-import { addMonths, getMonthRange } from "../../services/monthService";
+import {
+  addMonths,
+  compareMonthKeys,
+  getMonthRange,
+} from "../../services/monthService";
+
+import {
+  getPlanningCurrentMonth,
+  getPlanningMonthKeys,
+} from "../../services/planningHorizonRuntime";
+
+import { hasCalendarCoverage } from "../../utils/calendarCoverage";
 
 import {
   getFilteredAvailabilityPopulation,
@@ -30,15 +44,13 @@ import { useResourceFilters } from "../../hooks/useResourceFilters";
 
 import { formatHours, formatMonth } from "../../utils/formatters";
 
-import { PlanningHorizonControl } from "../availability-overview/PlanningHorizonControl";
-
 import { ActiveFilterSummary } from "../availability-filters/ActiveFilterSummary";
 
 import { ResourceFilterBar } from "../availability-filters/ResourceFilterBar";
 
 import { ResourceAvailabilityMatrix } from "../availability-overview/ResourceAvailabilityMatrix";
 
-import { ResourceReleaseSummary } from "../resource-detail/ResourceReleaseSummary";
+import { ResourceReleaseOutlookPanel } from "../resources/ResourceReleaseOutlookPanel";
 
 import { Card } from "../ui/Card";
 
@@ -46,37 +58,62 @@ import { EmptyState } from "../ui/EmptyState";
 
 import { PageHeader } from "../ui/PageHeader";
 
-const PLANNING_HORIZON_MONTHS = 4;
+import { ResourceMatrixMonthControls } from "../resources/ResourceMatrixMonthControls";
+
+const DEFAULT_MATRIX_MONTH_COUNT = 4;
 
 const RELEASE_HORIZON_MONTHS = PROJECT_TRACK_MONTHS.length;
 
-function hasCalendarCoverage(startMonth: string): boolean {
-  const requestedMonths = getMonthRange(startMonth, PLANNING_HORIZON_MONTHS);
+const DEFAULT_RESOURCES_PAGE_SIZE = 10;
 
-  const availableMonths = new Set(
-    availabilityQueryContext.workCalendar.map((record) => record.monthKey),
-  );
-
-  return requestedMonths.every((monthKey) => availableMonths.has(monthKey));
-}
+const RESOURCES_PAGE_SIZE_OPTIONS = [10, 20] as const;
 
 export function ResourcesPage() {
-  const [startMonth, setStartMonth] = useState(POC_CURRENT_MONTH);
+  const { availabilityQueryContext } = useResourceData();
+
+  const calendarMonthKeys = useMemo(
+    () =>
+      availabilityQueryContext.workCalendar.map((record) => record.monthKey),
+    [availabilityQueryContext.workCalendar],
+  );
+
+  const planningMonthKeys = useMemo(() => getPlanningMonthKeys(), []);
+
+  const [planningStartMonth, setPlanningStartMonth] = useState(
+    () => getPlanningCurrentMonth(),
+  );
+
+  const [customViewEnabled, setCustomViewEnabled] = useState(false);
+
+  const standardMonthKeys = useMemo(
+    () => getMonthRange(planningStartMonth, DEFAULT_MATRIX_MONTH_COUNT),
+    [planningStartMonth],
+  );
+
+  const [customMonthKeys, setCustomMonthKeys] = useState<string[]>(
+    standardMonthKeys,
+  );
+
+  const monthKeys = useMemo(() => {
+    const source = customViewEnabled ? customMonthKeys : standardMonthKeys;
+
+    return [...source].sort(compareMonthKeys);
+  }, [customViewEnabled, customMonthKeys, standardMonthKeys]);
+
+  const matrixAnchorMonth = monthKeys[0] ?? planningStartMonth;
 
   const { filters, setFilters, clearAll, removeDimensionValue } =
-    useResourceFilters(startMonth);
+    useResourceFilters(matrixAnchorMonth);
 
   const [sort, setSort] = useState<ResourceMatrixSort>({
     field: "availableHours",
     direction: "desc",
   });
 
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_RESOURCES_PAGE_SIZE);
 
-  const monthKeys = useMemo(
-    () => getMonthRange(startMonth, PLANNING_HORIZON_MONTHS),
-    [startMonth],
-  );
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
 
   const effectiveFocusMonth = monthKeys.includes(filters.focusMonth)
     ? filters.focusMonth
@@ -92,12 +129,11 @@ export function ResourcesPage() {
 
   const allRangeRecords = useMemo(
     () =>
-      getAvailabilityForRange(
+      getAvailabilityForMonthKeys(
         availabilityQueryContext,
-        startMonth,
-        PLANNING_HORIZON_MONTHS,
+        monthKeys,
       ),
-    [startMonth],
+    [availabilityQueryContext, monthKeys],
   );
 
   /*
@@ -152,6 +188,25 @@ export function ResourcesPage() {
     [matrixRows, sort],
   );
 
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+
+  const paginatedRows = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+
+    return sortedRows.slice(start, start + pageSize);
+  }, [sortedRows, safePage, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [effectiveFilters, monthKeys, planningStartMonth, customViewEnabled, sort.field, sort.direction]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
   const summary = useMemo(
     () => getResourceAvailabilityMatrixSummary(matrixRows, effectiveFocusMonth),
     [matrixRows, effectiveFocusMonth],
@@ -167,24 +222,26 @@ export function ResourcesPage() {
     );
   }, [allReleaseRecords, filteredRecords]);
 
-  const resourceOptions = useMemo(() => {
-    const employees = new Map<string, string>();
+  const selectedRow = useMemo(
+    () =>
+      matrixRows.find((row) => row.employeeId === selectedEmployeeId) ?? null,
+    [matrixRows, selectedEmployeeId],
+  );
 
-    for (const record of releasePopulation) {
-      employees.set(record.employeeId, record.employeeName);
+  useEffect(() => {
+    if (
+      selectedEmployeeId !== "" &&
+      !matrixRows.some((row) => row.employeeId === selectedEmployeeId)
+    ) {
+      setSelectedEmployeeId("");
     }
+  }, [matrixRows, selectedEmployeeId]);
 
-    return [...employees.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [releasePopulation]);
-
-  const selectedResourceId = resourceOptions.some(
-    ([employeeId]) => employeeId === selectedEmployeeId,
-  )
-    ? selectedEmployeeId
-    : (resourceOptions[0]?.[0] ?? "");
-
-  const previousStart = addMonths(startMonth, -1);
-  const nextStart = addMonths(startMonth, 1);
+  const handleSelectEmployee = useCallback((employeeId: string) => {
+    setSelectedEmployeeId((current) =>
+      current === employeeId ? "" : employeeId,
+    );
+  }, []);
 
   const handleSort = useCallback((field: ResourceMatrixSortField) => {
     setSort((current) => {
@@ -202,12 +259,40 @@ export function ResourcesPage() {
     });
   }, []);
 
-  function handleHorizonChange(next: string) {
-    if (!hasCalendarCoverage(next)) {
+  const previousPlanningStart = addMonths(planningStartMonth, -1);
+  const nextPlanningStart = addMonths(planningStartMonth, 1);
+
+  function syncFocusMonth(keys: string[]) {
+    if (keys.length === 0) {
       return;
     }
 
-    setStartMonth(next);
+    if (!keys.includes(filters.focusMonth)) {
+      setFilters({
+        ...filters,
+        focusMonth: keys[0],
+      });
+    }
+  }
+
+  function handlePlanningStartMonthChange(next: string) {
+    if (
+      !hasCalendarCoverage(
+        next,
+        DEFAULT_MATRIX_MONTH_COUNT,
+        calendarMonthKeys,
+      )
+    ) {
+      return;
+    }
+
+    setPlanningStartMonth(next);
+
+    const nextStandard = getMonthRange(next, DEFAULT_MATRIX_MONTH_COUNT);
+
+    if (!customViewEnabled) {
+      syncFocusMonth(nextStandard);
+    }
 
     setFilters({
       ...filters,
@@ -215,18 +300,66 @@ export function ResourcesPage() {
     });
   }
 
+  function handleCustomMonthKeysChange(nextMonthKeys: string[]) {
+    const sorted = [...nextMonthKeys].sort(compareMonthKeys);
+
+    setCustomMonthKeys(sorted);
+    syncFocusMonth(sorted);
+  }
+
+  function handleResetToPlanningPeriod() {
+    const anchor = getPlanningCurrentMonth();
+
+    setCustomViewEnabled(false);
+    setPlanningStartMonth(anchor);
+
+    const resetMonths = getMonthRange(anchor, DEFAULT_MATRIX_MONTH_COUNT);
+
+    setCustomMonthKeys(resetMonths);
+
+    setFilters({
+      ...filters,
+      focusMonth: anchor,
+    });
+  }
+
+  function handleEnableCustomView() {
+    setCustomMonthKeys(standardMonthKeys);
+    setCustomViewEnabled(true);
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Resource Availability"
         description="Employee-level availability and expected capacity release."
         actions={
-          <PlanningHorizonControl
-            startMonth={startMonth}
-            numberOfMonths={PLANNING_HORIZON_MONTHS}
-            onChange={handleHorizonChange}
-            canGoPrevious={hasCalendarCoverage(previousStart)}
-            canGoNext={hasCalendarCoverage(nextStart)}
+          <ResourceMatrixMonthControls
+            customViewEnabled={customViewEnabled}
+            onCustomViewEnabledChange={(enabled) => {
+              if (enabled) {
+                handleEnableCustomView();
+              } else {
+                setCustomViewEnabled(false);
+              }
+            }}
+            planningStartMonth={planningStartMonth}
+            planningMonthCount={DEFAULT_MATRIX_MONTH_COUNT}
+            onPlanningStartMonthChange={handlePlanningStartMonthChange}
+            canGoPlanningPrevious={hasCalendarCoverage(
+              previousPlanningStart,
+              DEFAULT_MATRIX_MONTH_COUNT,
+              calendarMonthKeys,
+            )}
+            canGoPlanningNext={hasCalendarCoverage(
+              nextPlanningStart,
+              DEFAULT_MATRIX_MONTH_COUNT,
+              calendarMonthKeys,
+            )}
+            customMonthKeys={customMonthKeys}
+            availableMonthKeys={planningMonthKeys}
+            onCustomMonthKeysChange={handleCustomMonthKeysChange}
+            onResetToPlanningPeriod={handleResetToPlanningPeriod}
           />
         }
       />
@@ -316,51 +449,29 @@ export function ResourcesPage() {
       ) : (
         <>
           <ResourceAvailabilityMatrix
-            rows={sortedRows}
+            rows={paginatedRows}
             monthKeys={monthKeys}
+            highlightMonthKey={effectiveFocusMonth}
             sort={sort}
             onSort={handleSort}
+            selectedEmployeeId={selectedEmployeeId || null}
+            onSelectEmployee={handleSelectEmployee}
+            pagination={{
+              totalItems: sortedRows.length,
+              page: safePage,
+              pageSize,
+              pageSizeOptions: RESOURCES_PAGE_SIZE_OPTIONS,
+              onPageChange: setPage,
+              onPageSizeChange: setPageSize,
+            }}
           />
 
-          {selectedResourceId && (
-            <div className="space-y-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-900">
-                    Resource Release Timing
-                  </h2>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Review when a resource gains capacity within the known
-                    planning horizon.
-                  </p>
-                </div>
-
-                <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
-                  Resource
-                  <select
-                    value={selectedResourceId}
-                    onChange={(event) =>
-                      setSelectedEmployeeId(event.target.value)
-                    }
-                    className="min-w-[180px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  >
-                    {resourceOptions.map(([employeeId, name]) => (
-                      <option key={employeeId} value={employeeId}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <ResourceReleaseSummary
-                records={releasePopulation}
-                employeeId={selectedResourceId}
-                focusMonth={effectiveFocusMonth}
-                compact
-              />
-            </div>
-          )}
+          <ResourceReleaseOutlookPanel
+            row={selectedRow}
+            matrixMonthKeys={monthKeys}
+            focusMonth={effectiveFocusMonth}
+            releaseRecords={releasePopulation}
+          />
         </>
       )}
     </div>

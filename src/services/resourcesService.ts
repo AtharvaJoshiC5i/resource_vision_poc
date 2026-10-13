@@ -12,7 +12,7 @@ import type {
   ResourceTableRow,
 } from "../types/resources";
 
-import { FAMSTACK_MONTHS, PROJECT_TRACK_MONTHS } from "../constants/poc";
+import { getProjectTrackPlanningMonths } from "./planningHorizonRuntime";
 
 /*
  * Complete resource month coverage.
@@ -26,28 +26,9 @@ import { FAMSTACK_MONTHS, PROJECT_TRACK_MONTHS } from "../constants/poc";
  * This replaces the previous hard-coded
  * Jan 2026 -> Dec 2026 list.
  */
-export const RESOURCE_MONTHS = [
-  ...FAMSTACK_MONTHS,
-  ...PROJECT_TRACK_MONTHS,
-] as const;
-
-/*
- * Forward-looking resource outlook.
- *
- * This is intentionally based on the centralized
- * Project Track planning months so the Resource
- * page automatically follows the same horizon as
- * Availability.
- *
- * Sep 2026
- * Oct 2026
- * Nov 2026
- * Dec 2026
- * Jan 2027
- * Feb 2027
- * Mar 2027
- */
-export const RESOURCE_OUTLOOK_MONTHS = [...PROJECT_TRACK_MONTHS] as const;
+export function getResourcePlanningMonths(): string[] {
+  return getProjectTrackPlanningMonths();
+}
 
 function getSortedUniqueValues(values: string[]): string[] {
   return [...new Set(values.filter((value) => value.trim() !== ""))].sort(
@@ -61,7 +42,7 @@ function getEmployeeOutlook(
 ): ResourceTableRow["outlook"] {
   const outlook: ResourceTableRow["outlook"] = {};
 
-  for (const monthKey of RESOURCE_OUTLOOK_MONTHS) {
+  for (const monthKey of getResourcePlanningMonths()) {
     const record = records.find(
       (candidate) =>
         candidate.employee_id === employeeId &&

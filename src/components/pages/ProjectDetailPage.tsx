@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ArrowLeft, FolderSearch } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
-import { availabilityQueryContext } from "../../data";
+import { useResourceData } from "../../context/ResourceDataContext";
 import { POC_CURRENT_MONTH, PROJECT_TRACK_MONTHS } from "../../constants/poc";
 
 import { RESOURCE_PRIORITY_WINDOW_DAYS } from "../../constants/resourcePlanning";
@@ -11,6 +11,8 @@ import { getProjectAvailabilityDetail } from "../../services/projectAvailability
 import { getAvailabilityForRange } from "../../services/availabilityQueryService";
 import { isAvailableByRequirementStart } from "../../services/availabilityTimingService";
 import { addMonths, getMonthRange } from "../../services/monthService";
+
+import { hasCalendarCoverage } from "../../utils/calendarCoverage";
 
 import { PlanningHorizonControl } from "../availability-overview/PlanningHorizonControl";
 import { ProjectMonthlyEffortSummary } from "../projects/ProjectMonthlyEffortSummary";
@@ -22,16 +24,6 @@ import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
 
 const PLANNING_HORIZON_MONTHS = 4;
-
-function hasCalendarCoverage(startMonth: string): boolean {
-  const requested = getMonthRange(startMonth, PLANNING_HORIZON_MONTHS);
-
-  const available = new Set(
-    availabilityQueryContext.workCalendar.map((record) => record.monthKey),
-  );
-
-  return requested.every((month) => available.has(month));
-}
 
 function formatDate(value: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
@@ -66,6 +58,14 @@ function ProjectMeta({ label, value }: { label: string; value: string }) {
 }
 
 export function ProjectDetailPage() {
+  const { availabilityQueryContext } = useResourceData();
+
+  const calendarMonthKeys = useMemo(
+    () =>
+      availabilityQueryContext.workCalendar.map((record) => record.monthKey),
+    [availabilityQueryContext.workCalendar],
+  );
+
   const { projectId } = useParams<{
     projectId: string;
   }>();
@@ -90,7 +90,7 @@ export function ProjectDetailPage() {
             startMonth,
             PLANNING_HORIZON_MONTHS,
           ),
-    [decodedProjectId, startMonth],
+    [availabilityQueryContext, decodedProjectId, startMonth],
   );
 
   const planningHorizonEnd = useMemo(() => {
@@ -113,7 +113,7 @@ export function ProjectDetailPage() {
         POC_CURRENT_MONTH,
         PROJECT_TRACK_MONTHS.length,
       ),
-    [],
+    [availabilityQueryContext],
   );
 
   const timingRows = useMemo(() => {
@@ -136,7 +136,11 @@ export function ProjectDetailPage() {
   const nextStart = addMonths(startMonth, 1);
 
   function handleHorizonChange(next: string) {
-    if (!hasCalendarCoverage(next)) return;
+    if (
+      !hasCalendarCoverage(next, PLANNING_HORIZON_MONTHS, calendarMonthKeys)
+    ) {
+      return;
+    }
 
     setStartMonth(next);
   }
@@ -213,8 +217,16 @@ export function ProjectDetailPage() {
           startMonth={startMonth}
           numberOfMonths={PLANNING_HORIZON_MONTHS}
           onChange={handleHorizonChange}
-          canGoPrevious={hasCalendarCoverage(previousStart)}
-          canGoNext={hasCalendarCoverage(nextStart)}
+          canGoPrevious={hasCalendarCoverage(
+            previousStart,
+            PLANNING_HORIZON_MONTHS,
+            calendarMonthKeys,
+          )}
+          canGoNext={hasCalendarCoverage(
+            nextStart,
+            PLANNING_HORIZON_MONTHS,
+            calendarMonthKeys,
+          )}
         />
       </div>
 

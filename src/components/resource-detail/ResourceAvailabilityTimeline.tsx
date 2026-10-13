@@ -67,16 +67,16 @@ export function ResourceAvailabilityTimeline({
     <Card padding={false}>
       <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">
+          <h2 className="text-base font-semibold text-slate-900">
             Monthly Availability
           </h2>
 
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="mt-1 text-sm leading-6 text-slate-600">
             Capacity, allocation and available hours across the planning horizon.
           </p>
         </div>
 
-        <p className="shrink-0 text-[10px] text-slate-400">
+        <p className="shrink-0 text-xs leading-5 text-slate-500">
           Blocked capacity: 0h in Availability V1
         </p>
       </div>

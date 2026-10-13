@@ -2,7 +2,27 @@ import type { Employee } from "../../types/domain";
 
 import type { ZingHREmployee } from "../../types/zinghr";
 
+import { UNSPECIFIED_GEO_LABEL } from "../../constants/capacityFallback";
+
 export const DEFAULT_FTE_PERCENTAGE = 1;
+
+function normalizeGeoLabel(value: string): string {
+  const trimmed = value.trim();
+
+  return trimmed === "" ? UNSPECIFIED_GEO_LABEL : trimmed;
+}
+
+function normalizeEmployeeDate(value: string): string {
+  const trimmed = value.trim();
+
+  if (trimmed === "") {
+    return "";
+  }
+
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed);
+
+  return match !== null ? match[1] : "";
+}
 
 export function normalizeEmployees(records: ZingHREmployee[]): Employee[] {
   return records.map((record) => ({
@@ -13,10 +33,13 @@ export function normalizeEmployees(records: ZingHREmployee[]): Employee[] {
     employeeStatus:
       record.employment_status === "Active" ? "ACTIVE" : "INACTIVE",
 
-    dateOfJoining: record.date_of_joining,
+    dateOfJoining: normalizeEmployeeDate(record.date_of_joining),
 
-    lastWorkingDate:
-      record.date_of_leaving.trim() === "" ? undefined : record.date_of_leaving,
+    lastWorkingDate: (() => {
+      const leaving = normalizeEmployeeDate(record.date_of_leaving);
+
+      return leaving === "" ? undefined : leaving;
+    })(),
 
     primaryCapability: record.primary_capability,
 
@@ -26,9 +49,9 @@ export function normalizeEmployees(records: ZingHREmployee[]): Employee[] {
 
     grade: record.grade,
 
-    location: record.location,
+    location: normalizeGeoLabel(record.location),
 
-    country: record.country,
+    country: normalizeGeoLabel(record.country),
 
     /*
      * POC assumption:

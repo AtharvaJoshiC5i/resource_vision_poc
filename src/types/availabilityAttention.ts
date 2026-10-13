@@ -40,3 +40,19 @@ export interface UpcomingAvailabilityMonthSummary {
 
   resourcesBecomingFullyAvailable: number;
 }
+
+export interface AvailabilityAttentionMonthSummary {
+  monthKey: string;
+
+  /** Distinct employees with at least one attention item in this month. */
+  resourcesAffected: number;
+
+  /** Sum of absolute month-to-month capacity drops (when applicable). */
+  lostCapacityHours: number;
+
+  becomingFullyAllocatedCount: number;
+
+  overAllocatedCount: number;
+
+  capacityReductionCount: number;
+}

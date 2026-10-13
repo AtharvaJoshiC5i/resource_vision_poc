@@ -9,6 +9,7 @@ import { formatHours, formatMonth } from "../../utils/formatters";
 
 import { ProjectPlanningPriority } from "./ProjectPlanningPriority";
 import { Card } from "../ui/Card";
+import { TableHeaderCell } from "../ui/TableHeaderCell";
 
 interface ProjectTableProps {
   rows: ProjectListRow[];
@@ -47,7 +48,7 @@ export function ProjectTable({
   return (
     <Card padding={false}>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1060px] border-collapse text-sm">
+        <table className="w-full min-w-[1060px] border-collapse text-sm leading-normal">
           <thead className="bg-slate-50">
             <tr>
               <Header>Project</Header>
@@ -67,12 +68,12 @@ export function ProjectTable({
                 key={row.projectId}
                 className="transition-colors hover:bg-slate-50/80"
               >
-                <td className="px-5 py-3.5 align-middle">
+                <td className="px-5 py-4 align-middle">
                   <Link
                     to={`/projects/${encodeURIComponent(row.projectId)}`}
                     className="group inline-flex items-center gap-1.5 rounded outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                   >
-                    <span className="text-xs font-semibold text-slate-900 group-hover:text-blue-700">
+                    <span className="text-sm font-semibold text-slate-900 group-hover:text-blue-700">
                       {row.projectName}
                     </span>
 
@@ -134,12 +135,12 @@ export function ProjectTable({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/50 px-5 py-3">
-        <p className="text-[11px] text-slate-500">
+        <p className="text-sm leading-6 text-slate-600">
           Planning priority is based on project start dates, independently of
           project lifecycle status.
         </p>
 
-        <span className="text-[11px] font-medium tabular-nums text-slate-500">
+        <span className="text-sm font-medium tabular-nums text-slate-600">
           {rows.length} {rows.length === 1 ? "project" : "projects"}
         </span>
       </div>
@@ -155,13 +156,11 @@ function Header({
   align?: "left" | "right";
 }) {
   return (
-    <th
-      scope="col"
-      className={`border-b border-slate-200 px-4 py-3 text-[10px] font-semibold uppercase tracking-wide text-slate-500 first:px-5 last:px-5 ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
+    <TableHeaderCell
+      align={align}
+      className="first:px-5 last:px-5"
     >
       {children}
-    </th>
+    </TableHeaderCell>
   );
 }

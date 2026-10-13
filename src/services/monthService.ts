@@ -1,8 +1,18 @@
+/** Canonical YYYY-MM for API/mock records (accepts date-time strings). */
+export function toCanonicalMonthKey(monthKey: string): string {
+  const { year, month } = parseMonthKey(monthKey);
+
+  return createMonthKey(year, month);
+}
+
 export function parseMonthKey(monthKey: string): {
   year: number;
   month: number;
 } {
-  const match = /^(\d{4})-(\d{2})$/.exec(monthKey.trim());
+  const trimmed = monthKey.trim();
+
+  // Canonical YYYY-MM or SQL/datetime strings such as "2024-04-01 00:00:00".
+  const match = /^(\d{4})-(\d{2})(?:$|[-T\s/])/.exec(trimmed);
 
   if (match === null) {
     throw new Error(`Invalid month key: ${monthKey}`);

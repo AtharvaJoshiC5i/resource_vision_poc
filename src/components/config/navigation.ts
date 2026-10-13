@@ -98,21 +98,21 @@ export const pageMetadata = {
     title: "Overview",
 
     description:
-      "Resource capacity and availability overview.",
+      "Organization-wide capacity, utilization, and unassigned demand at a glance.",
   },
 
   availability: {
     title: "Resource Availability",
 
     description:
-      "Current and forward-looking workforce capacity.",
+      "See how many hours each person can take on, month by month, after planned project effort.",
   },
 
   resources: {
     title: "Resources",
 
     description:
-      "Employee-level availability across the current planning horizon.",
+      "Browse employees and compare availability across the planning horizon.",
   },
 
   resourceDetail: {

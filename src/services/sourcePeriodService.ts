@@ -1,8 +1,8 @@
-import { POC_CURRENT_MONTH } from "../constants/poc";
-
 import type { AllocationSource } from "../types/domain";
 
 import { compareMonthKeys } from "./monthService";
+
+import { getPlanningCurrentMonth } from "./planningHorizonRuntime";
 
 /*
  * Resource Vision POC source-period rule.
@@ -25,7 +25,7 @@ import { compareMonthKeys } from "./monthService";
  * current date.
  */
 export function getSourceForMonth(monthKey: string): AllocationSource {
-  const comparison = compareMonthKeys(monthKey, POC_CURRENT_MONTH);
+  const comparison = compareMonthKeys(monthKey, getPlanningCurrentMonth());
 
   if (comparison < 0) {
     return "FAMSTACK";

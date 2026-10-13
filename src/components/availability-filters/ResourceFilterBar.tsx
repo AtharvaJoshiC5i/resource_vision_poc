@@ -46,6 +46,15 @@ const STATUS_OPTIONS: {
   },
 ];
 
+const STATUS_FILTER_OPTIONS = STATUS_OPTIONS.map((option) => ({
+  value: option.value,
+  label: option.label,
+  count: 0,
+}));
+
+const controlClass =
+  "h-9 rounded-md border border-slate-200 bg-white text-xs text-slate-700 shadow-sm outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-900/5";
+
 export function ResourceFilterBar({
   filters,
   options,
@@ -69,18 +78,6 @@ export function ResourceFilterBar({
     });
   }
 
-  function toggleStatus(value: ResourceAvailabilityStatusFilter) {
-    const selected = filters.availabilityStatus;
-
-    onFiltersChange({
-      ...filters,
-
-      availabilityStatus: selected.includes(value)
-        ? selected.filter((item) => item !== value)
-        : [...selected, value],
-    });
-  }
-
   const hasFilters =
     filters.search.trim() !== "" ||
     filters.primaryCapability.length > 0 ||
@@ -92,11 +89,11 @@ export function ResourceFilterBar({
     filters.availabilityStatus.length > 0;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1 lg:max-w-72">
+    <div className="rounded-xl border border-slate-200/90 bg-white px-3.5 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="relative min-w-[12rem] flex-1 sm:min-w-[14rem] lg:max-w-[16rem]">
           <Search
-            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400"
             aria-hidden="true"
           />
 
@@ -112,7 +109,7 @@ export function ResourceFilterBar({
             }
             placeholder="Search resources..."
             aria-label="Search resources"
-            className="h-9 w-full rounded-lg border border-slate-300 bg-white pl-9 pr-3 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className={`${controlClass} w-full pl-8 pr-2.5 placeholder:text-slate-400`}
           />
         </div>
 
@@ -145,6 +142,13 @@ export function ResourceFilterBar({
         />
 
         <CompactMultiSelect
+          label="Country"
+          options={options.country}
+          selected={filters.country}
+          onChange={(values) => updateDimension("country", values)}
+        />
+
+        <CompactMultiSelect
           label="Location"
           options={options.location}
           selected={filters.location}
@@ -152,48 +156,23 @@ export function ResourceFilterBar({
         />
 
         <CompactMultiSelect
-          label="Country"
-          options={options.country}
-          selected={filters.country}
-          onChange={(values) => updateDimension("country", values)}
+          label="Status"
+          options={STATUS_FILTER_OPTIONS}
+          selected={filters.availabilityStatus}
+          showCounts={false}
+          onChange={(values) =>
+            onFiltersChange({
+              ...filters,
+              availabilityStatus: values as ResourceAvailabilityStatusFilter[],
+            })
+          }
         />
-
-        <div className="relative">
-          <select
-            value={filters.availabilityStatus[0] ?? ""}
-            onChange={(event) => {
-              const value = event.target.value;
-
-              if (value === "") {
-                onFiltersChange({
-                  ...filters,
-
-                  availabilityStatus: [],
-                });
-
-                return;
-              }
-
-              toggleStatus(value as ResourceAvailabilityStatusFilter);
-            }}
-            aria-label="Availability status"
-            className="h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs font-medium text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          >
-            <option value="">Status</option>
-
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
 
         {hasFilters && (
           <button
             type="button"
             onClick={onClearAll}
-            className="h-9 rounded-lg px-3 text-xs font-medium text-blue-700 outline-none hover:bg-blue-50 focus-visible:ring-2 focus-visible:ring-blue-600"
+            className={`${controlClass} border-transparent px-2.5 font-medium text-slate-600 shadow-none hover:bg-slate-50 hover:text-slate-900 focus-visible:ring-blue-600/30`}
           >
             Clear all
           </button>

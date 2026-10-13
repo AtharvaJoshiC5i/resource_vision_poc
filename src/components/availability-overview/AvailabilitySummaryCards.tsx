@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   BriefcaseBusiness,
   Clock3,
@@ -53,20 +54,20 @@ function SummaryCard({
 
   return (
     <div
-      className={`group relative min-w-0 overflow-hidden rounded-xl border bg-white px-4 py-4 transition-colors ${
+      className={`group relative min-w-0 overflow-hidden rounded-xl border bg-white px-4 py-5 transition-colors ${
         isAttention
           ? "border-red-200"
           : "border-slate-200"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold uppercase leading-snug tracking-wide text-slate-600">
             {label}
           </p>
 
           <p
-            className={`mt-3 truncate text-[22px] font-semibold leading-none tracking-tight tabular-nums ${
+            className={`mt-2.5 text-2xl font-semibold leading-tight tracking-tight tabular-nums ${
               isAttention
                 ? "text-red-700"
                 : "text-slate-950"
@@ -93,12 +94,12 @@ function SummaryCard({
         </div>
       </div>
 
-      <div className="mt-3 flex min-h-5 items-end">
+      <div className="mt-3 min-h-6">
         <p
-          className={`truncate text-[11px] leading-4 ${
+          className={`text-xs leading-5 ${
             isAttention
-              ? "text-red-500"
-              : "text-slate-500"
+              ? "text-red-600"
+              : "text-slate-600"
           }`}
         >
           {context}
@@ -147,10 +148,19 @@ export function AvailabilitySummaryCards({
     summary.overAllocatedResources >
     0;
 
+  const allocatedShare =
+    summary.totalCapacityHours === 0
+      ? 0
+      : Math.round(
+          (summary.totalAllocatedHours /
+            summary.totalCapacityHours) *
+            100,
+        );
+
   return (
     <section
       aria-label="Availability summary"
-      className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+      className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6"
     >
       <SummaryCard
         label="Total Resources"
@@ -188,6 +198,13 @@ export function AvailabilitySummaryCards({
         context="Usable positive capacity"
         icon={Clock3}
         variant="positive"
+      />
+
+      <SummaryCard
+        label="Allocated Hours"
+        value={formatHours(summary.totalAllocatedHours)}
+        context={`${allocatedShare}% of ${formatHours(summary.totalCapacityHours)} capacity`}
+        icon={Activity}
       />
 
       <SummaryCard

@@ -1,7 +1,7 @@
 import { FolderSearch } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { availabilityQueryContext } from "../../data";
+import { useResourceData } from "../../context/ResourceDataContext";
 import { POC_CURRENT_MONTH } from "../../constants/poc";
 
 import { RESOURCE_PRIORITY_WINDOW_DAYS } from "../../constants/resourcePlanning";
@@ -16,6 +16,8 @@ import {
 } from "../../services/projectFilterService";
 
 import { addMonths, getMonthRange } from "../../services/monthService";
+
+import { hasCalendarCoverage } from "../../utils/calendarCoverage";
 
 import type { ProjectFilters } from "../../types/projectFilters";
 import { DEFAULT_PROJECT_FILTERS } from "../../types/projectFilters";
@@ -32,16 +34,6 @@ import { PageHeader } from "../ui/PageHeader";
 
 const PLANNING_HORIZON_MONTHS = 4;
 
-function hasCalendarCoverage(startMonth: string): boolean {
-  const requested = getMonthRange(startMonth, PLANNING_HORIZON_MONTHS);
-
-  const months = new Set(
-    availabilityQueryContext.workCalendar.map((record) => record.monthKey),
-  );
-
-  return requested.every((month) => months.has(month));
-}
-
 function getHorizonEndDate(monthKeys: string[]): string {
   const lastMonth = monthKeys[monthKeys.length - 1];
 
@@ -57,6 +49,14 @@ function getHorizonEndDate(monthKeys: string[]): string {
 }
 
 export function ProjectsPage() {
+  const { availabilityQueryContext } = useResourceData();
+
+  const calendarMonthKeys = useMemo(
+    () =>
+      availabilityQueryContext.workCalendar.map((record) => record.monthKey),
+    [availabilityQueryContext.workCalendar],
+  );
+
   const [startMonth, setStartMonth] = useState(POC_CURRENT_MONTH);
 
   const [focusMonth, setFocusMonth] = useState(POC_CURRENT_MONTH);
@@ -115,7 +115,9 @@ export function ProjectsPage() {
   );
 
   function handleHorizonChange(next: string) {
-    if (!hasCalendarCoverage(next)) {
+    if (
+      !hasCalendarCoverage(next, PLANNING_HORIZON_MONTHS, calendarMonthKeys)
+    ) {
       return;
     }
 
@@ -131,7 +133,7 @@ export function ProjectsPage() {
   const nextStart = addMonths(startMonth, 1);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <PageHeader
         title="Projects"
         description="Explore project allocations, assigned resources, and planning priority."
@@ -140,8 +142,16 @@ export function ProjectsPage() {
             startMonth={startMonth}
             numberOfMonths={PLANNING_HORIZON_MONTHS}
             onChange={handleHorizonChange}
-            canGoPrevious={hasCalendarCoverage(previousStart)}
-            canGoNext={hasCalendarCoverage(nextStart)}
+            canGoPrevious={hasCalendarCoverage(
+              previousStart,
+              PLANNING_HORIZON_MONTHS,
+              calendarMonthKeys,
+            )}
+            canGoNext={hasCalendarCoverage(
+              nextStart,
+              PLANNING_HORIZON_MONTHS,
+              calendarMonthKeys,
+            )}
           />
         }
       />

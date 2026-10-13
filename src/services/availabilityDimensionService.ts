@@ -8,6 +8,25 @@ import type {
 
 import { getOperationalAvailableHours } from "./resourceFilterService";
 
+export function listEmployeesInDimensionGroup(
+  records: EmployeeMonthAvailability[],
+  dimension: ResourceDimension,
+  monthKey: string,
+  groupKey: string,
+): EmployeeMonthAvailability[] {
+  return records
+    .filter((record) => {
+      if (record.monthKey !== monthKey) {
+        return false;
+      }
+
+      const value = getDimensionValue(record, dimension);
+
+      return value === groupKey;
+    })
+    .sort((left, right) => left.employeeName.localeCompare(right.employeeName));
+}
+
 function getDimensionValue(
   record: EmployeeMonthAvailability,
   dimension: ResourceDimension,

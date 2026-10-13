@@ -53,7 +53,7 @@ export function getEmployeeAvailabilityForMonth(
   );
 
   if (employee === undefined) {
-    throw new Error(`Unknown employee: ${employeeId}`);
+    return null;
   }
 
   const workforceState = getWorkforceState(employee, monthKey);
@@ -140,6 +140,17 @@ export function getAvailabilityForRange(
   numberOfMonths: number,
 ): EmployeeMonthAvailability[] {
   return getMonthRange(startMonth, numberOfMonths).flatMap((monthKey) =>
+    getAvailabilityForMonth(context, monthKey),
+  );
+}
+
+export function getAvailabilityForMonthKeys(
+  context: AvailabilityQueryContext,
+  monthKeys: readonly string[],
+): EmployeeMonthAvailability[] {
+  const uniqueMonths = [...new Set(monthKeys)].sort();
+
+  return uniqueMonths.flatMap((monthKey) =>
     getAvailabilityForMonth(context, monthKey),
   );
 }

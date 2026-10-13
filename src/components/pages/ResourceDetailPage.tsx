@@ -4,15 +4,20 @@ import { ArrowLeft, SearchX } from "lucide-react";
 
 import { Link, useParams } from "react-router-dom";
 
-import { availabilityQueryContext } from "../../data";
+import { useResourceData } from "../../context/ResourceDataContext";
 
-import { POC_CURRENT_MONTH, PROJECT_TRACK_MONTHS } from "../../constants/poc";
+import {
+  getPlanningCurrentMonth,
+  getPlanningMonthKeys,
+} from "../../services/planningHorizonRuntime";
 
 import { getResourceDetailAvailability } from "../../services/resourceDetailAvailabilityService";
 
 import { getEmployeeAvailabilityRange } from "../../services/availabilityQueryService";
 
 import { addMonths, getMonthRange } from "../../services/monthService";
+
+import { hasCalendarCoverage as hasHorizonCalendarCoverage } from "../../utils/calendarCoverage";
 
 import { PlanningHorizonControl } from "../availability-overview/PlanningHorizonControl";
 
@@ -51,19 +56,21 @@ import { EmptyState } from "../ui/EmptyState";
 
 const PLANNING_HORIZON_MONTHS = 4;
 
-const RELEASE_HORIZON_MONTHS = PROJECT_TRACK_MONTHS.length;
+function getReleaseHorizonMonthCount(): number {
+  const monthKeys = getPlanningMonthKeys();
 
-function hasCalendarCoverage(startMonth: string): boolean {
-  const months = getMonthRange(startMonth, PLANNING_HORIZON_MONTHS);
-
-  const availableMonths = new Set(
-    availabilityQueryContext.workCalendar.map((calendar) => calendar.monthKey),
-  );
-
-  return months.every((month) => availableMonths.has(month));
+  return monthKeys.length > 0 ? monthKeys.length : 7;
 }
 
 export function ResourceDetailPage() {
+  const { availabilityQueryContext } = useResourceData();
+
+  const calendarMonthKeys = useMemo(
+    () =>
+      availabilityQueryContext.workCalendar.map((calendar) => calendar.monthKey),
+    [availabilityQueryContext.workCalendar],
+  );
+
   const { employeeId } = useParams<{
     employeeId: string;
   }>();
@@ -71,9 +78,11 @@ export function ResourceDetailPage() {
   const decodedEmployeeId =
     employeeId === undefined ? "" : decodeURIComponent(employeeId).trim();
 
-  const [startMonth, setStartMonth] = useState(POC_CURRENT_MONTH);
+  const planningAnchorMonth = getPlanningCurrentMonth();
 
-  const [selectedMonth, setSelectedMonth] = useState(POC_CURRENT_MONTH);
+  const [startMonth, setStartMonth] = useState(planningAnchorMonth);
+
+  const [selectedMonth, setSelectedMonth] = useState(planningAnchorMonth);
 
   /**
    * Existing planning horizon.
@@ -96,7 +105,7 @@ export function ResourceDetailPage() {
             startMonth,
             PLANNING_HORIZON_MONTHS,
           ),
-    [decodedEmployeeId, startMonth],
+    [availabilityQueryContext, decodedEmployeeId, startMonth],
   );
 
   /**
@@ -131,10 +140,10 @@ export function ResourceDetailPage() {
         : getEmployeeAvailabilityRange(
             availabilityQueryContext,
             decodedEmployeeId,
-            POC_CURRENT_MONTH,
-            RELEASE_HORIZON_MONTHS,
+            planningAnchorMonth,
+            getReleaseHorizonMonthCount(),
           ),
-    [decodedEmployeeId],
+    [availabilityQueryContext, decodedEmployeeId, planningAnchorMonth],
   );
 
   const previousStart = addMonths(startMonth, -1);
@@ -142,7 +151,13 @@ export function ResourceDetailPage() {
   const nextStart = addMonths(startMonth, 1);
 
   function handleHorizonChange(next: string) {
-    if (!hasCalendarCoverage(next)) {
+    if (
+      !hasHorizonCalendarCoverage(
+        next,
+        PLANNING_HORIZON_MONTHS,
+        calendarMonthKeys,
+      )
+    ) {
       return;
     }
 
@@ -225,8 +240,16 @@ export function ResourceDetailPage() {
           startMonth={startMonth}
           numberOfMonths={PLANNING_HORIZON_MONTHS}
           onChange={handleHorizonChange}
-          canGoPrevious={hasCalendarCoverage(previousStart)}
-          canGoNext={hasCalendarCoverage(nextStart)}
+          canGoPrevious={hasHorizonCalendarCoverage(
+            previousStart,
+            PLANNING_HORIZON_MONTHS,
+            calendarMonthKeys,
+          )}
+          canGoNext={hasHorizonCalendarCoverage(
+            nextStart,
+            PLANNING_HORIZON_MONTHS,
+            calendarMonthKeys,
+          )}
         />
       </div>
 
