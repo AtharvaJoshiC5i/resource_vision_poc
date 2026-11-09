@@ -37,7 +37,7 @@ import { ProjectsDirectory } from "./ProjectsDirectory";
 
 const COVERAGE_DEFAULT = "All Projects";
 
-const profileControlLabel = "mb-1.5 block text-[11px] font-medium tracking-wide text-ink-soft";
+const profileControlLabel = "mb-1.5 block text-xs font-medium tracking-wide text-ink-soft";
 
 /** Profile row: reporting months + project switcher share one control height. */
 const profileFilterTrigger = "!h-14 !min-h-14 items-center py-0";
@@ -46,7 +46,11 @@ const projectSelectTrigger =
   "w-full rounded-lg border border-border bg-surface text-sm text-ink transition-colors hover:border-muted/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15";
 
 /** Shared viewport height for team table and trend chart (fixed, not min-* stacking). */
-const PROJECT_WORK_VIEWPORT = "h-[min(19.5rem,36vh)] max-h-[min(19.5rem,36vh)]";
+const PROJECT_WORK_VIEWPORT = "h-[max(15rem,min(19.5rem,36dvh))] max-h-[max(15rem,min(19.5rem,36dvh))]";
+
+/** Team table: grows with its content on phones, scrolls on tablets, matches the chart height when side by side. */
+const PROJECT_TEAM_VIEWPORT =
+  "max-h-[min(32rem,70dvh)] max-md:max-h-none xl:h-[max(15rem,min(19.5rem,36dvh))] xl:max-h-[max(15rem,min(19.5rem,36dvh))]";
 
 /** Bordered scroll well with optional footnote — keeps wide tables/charts feeling intentional, not cramped. */
 function PanelScrollFrame({
@@ -75,7 +79,7 @@ function PanelScrollFrame({
       <div className={`${overflow} ${viewportClass} ${pad} overscroll-contain [scrollbar-gutter:stable]`} tabIndex={0}>
         {children}
       </div>
-      {hint ? <p className="border-t border-hairline/70 px-3 py-2.5 text-[11px] leading-snug text-muted">{hint}</p> : null}
+      {hint ? <p className="border-t border-hairline/70 px-3 py-2.5 text-xs leading-snug text-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -83,7 +87,7 @@ function PanelScrollFrame({
 function ProjectFactRow({ label, value, numeric = false }: { label: string; value: ReactNode; numeric?: boolean }) {
   return (
     <div className="grid grid-cols-1 gap-1 border-b border-hairline px-4 py-3 last:border-b-0 sm:grid-cols-[10.5rem_minmax(0,1fr)] sm:items-baseline sm:gap-4 sm:px-5 sm:py-3.5">
-      <dt className="text-[11px] font-medium leading-snug text-muted">{label}</dt>
+      <dt className="text-xs font-medium leading-snug text-muted">{label}</dt>
       <dd className={`min-w-0 text-[13px] font-medium leading-snug text-ink ${numeric ? "tabular-nums" : ""}`}>{value}</dd>
     </div>
   );
@@ -93,7 +97,7 @@ function ProjectRecordSection({ title, children }: { title: string; children: Re
   return (
     <div className="min-w-0">
       <div className="border-b border-hairline bg-canvas/35 px-4 py-2 sm:px-5">
-        <h3 className="text-[10px] font-semibold tracking-wide text-muted uppercase">{title}</h3>
+        <h3 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{title}</h3>
       </div>
       <dl>{children}</dl>
     </div>
@@ -137,12 +141,12 @@ function ProjectProfileStats({
           key={item.label}
           className={`flex min-w-0 flex-col justify-center px-3 py-3 sm:px-3.5 sm:py-3.5 ${index > 0 ? "border-l border-hairline" : ""}`}
         >
-          <span className="text-[10px] font-medium tracking-wide text-muted uppercase">{item.label}</span>
+          <span className="text-[11px] font-medium tracking-wide text-muted uppercase">{item.label}</span>
           <p className="mt-1 flex min-w-0 items-baseline gap-1">
             <span className="truncate text-base font-semibold tabular-nums tracking-tight text-ink">{item.value}</span>
             {item.unit ? <span className="shrink-0 text-[12px] font-medium text-muted">{item.unit}</span> : null}
           </p>
-          <span className="mt-0.5 text-[10px] leading-snug text-muted">{item.hint}</span>
+          <span className="mt-0.5 text-[11px] leading-snug text-muted">{item.hint}</span>
         </div>
       ))}
     </div>
@@ -343,13 +347,64 @@ function EmployeeCell({ emp }: { emp: ProjectEmployee }) {
       >
         {emp.name}
       </Link>
-      <span className="mt-0.5 block text-[10px] tabular-nums text-muted">{emp.code}</span>
+      <span className="mt-0.5 block text-[11px] tabular-nums text-muted">{emp.code}</span>
       {meta ? (
-        <p className="mt-1 truncate text-[10px] leading-snug text-ink-soft" title={meta}>
+        <p className="mt-1 truncate text-[11px] leading-snug text-ink-soft" title={meta}>
           {meta}
         </p>
       ) : null}
     </div>
+  );
+}
+
+/** Phone layout: one block per employee with a month strip that scrolls sideways. */
+function EmployeeAllocationList({ detail }: { detail: ProjectDetail }) {
+  return (
+    <ul aria-label="Employee allocation by month" className="divide-y divide-hairline md:hidden">
+      {detail.employees.map((emp) => (
+        <li key={emp.key} className="px-3 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <EmployeeCell emp={emp} />
+            </div>
+            <span className="shrink-0 text-right">
+              <span className="block text-xs text-muted">Total</span>
+              <span className="text-sm font-medium tabular-nums text-ink">{hours(emp.total)}</span>
+            </span>
+          </div>
+          <div
+            className="-mx-3 mt-2.5 overflow-x-auto px-3 pb-1"
+            tabIndex={0}
+            role="region"
+            aria-label={`Monthly hours for ${emp.name}`}
+          >
+            <ul className="flex w-max gap-1.5">
+              {emp.cells.map((cell) => (
+                <li
+                  key={cell.month}
+                  className="flex w-14 shrink-0 flex-col items-center gap-0.5 rounded-md border border-hairline bg-canvas/40 px-1 py-1.5 text-center"
+                >
+                  <span className="text-xs text-muted">{compactMonth(cell.month)}</span>
+                  <span className="text-xs tabular-nums text-ink-soft">
+                    {cell.state === "hours" ? (
+                      hours(cell.hours)
+                    ) : cell.state === "dash" ? (
+                      <span className="text-muted" title="Employee assigned, hours not recorded">
+                        {EM_DASH}
+                      </span>
+                    ) : (
+                      <span className="text-hairline" aria-hidden="true">
+                        ·
+                      </span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -358,8 +413,10 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
     return <EmptyBlock message="No employees are associated with this project in the reporting period" />;
   }
   return (
+    <>
+    <EmployeeAllocationList detail={detail} />
     <table
-      className="w-max min-w-full border-collapse text-xs"
+      className="hidden w-max min-w-full border-collapse text-xs md:table"
       role="grid"
       aria-label="Employee allocation by month"
     >
@@ -367,7 +424,7 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
         <tr>
           <th
             scope="col"
-            className={`${tableHeadClass} sticky left-0 z-30 w-[13.5rem] min-w-[13.5rem] border-r border-r-hairline bg-surface py-2 pl-2.5 text-left text-[10px] shadow-[4px_0_8px_-2px_rgba(15,23,42,0.12)]`}
+            className={`${tableHeadClass} sticky left-0 z-30 w-[13.5rem] min-w-[13.5rem] border-r border-r-hairline bg-surface py-2 pl-2.5 text-left text-[11px] shadow-[4px_0_8px_-2px_rgba(15,23,42,0.12)]`}
           >
             Employee
           </th>
@@ -376,14 +433,14 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
               key={m.key}
               scope="col"
               title={m.label}
-              className={`${tableHeadClass} min-w-[4.25rem] whitespace-nowrap px-1.5 py-2 text-right text-[10px] font-medium`}
+              className={`${tableHeadClass} min-w-[4.25rem] whitespace-nowrap px-1.5 py-2 text-right text-[11px] font-medium`}
             >
               {compactMonth(m.key)}
             </th>
           ))}
           <th
             scope="col"
-            className={`${tableHeadClass} min-w-[4.25rem] border-l border-l-hairline bg-surface px-1.5 py-2 text-right text-[10px] font-semibold text-ink-soft`}
+            className={`${tableHeadClass} min-w-[4.25rem] border-l border-l-hairline bg-surface px-1.5 py-2 text-right text-[11px] font-semibold text-ink-soft`}
           >
             Total
           </th>
@@ -403,7 +460,7 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
             {emp.cells.map((cell) => (
               <td
                 key={cell.month}
-                className="border-b border-hairline px-1.5 py-2.5 text-right align-middle text-[11px] tabular-nums text-ink-soft group-last:border-b-0 group-hover:bg-canvas/60"
+                className="border-b border-hairline px-1.5 py-2.5 text-right align-middle text-xs tabular-nums text-ink-soft group-last:border-b-0 group-hover:bg-canvas/60"
               >
                 {cell.state === "hours" ? (
                   hours(cell.hours)
@@ -418,13 +475,14 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
                 )}
               </td>
             ))}
-            <td className="border-b border-l border-hairline bg-surface/80 px-1.5 py-2.5 text-right align-middle text-[11px] font-medium tabular-nums text-ink group-last:border-b-0 group-hover:bg-canvas/60">
+            <td className="border-b border-l border-hairline bg-surface/80 px-1.5 py-2.5 text-right align-middle text-xs font-medium tabular-nums text-ink group-last:border-b-0 group-hover:bg-canvas/60">
               {hours(emp.total)}
             </td>
           </tr>
         ))}
       </tbody>
     </table>
+    </>
   );
 }
 
@@ -495,7 +553,7 @@ function ProjectDropdown({
         <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 text-muted ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-full min-w-[20rem] overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-popover) sm:min-w-[26rem]">
+        <div className="absolute inset-x-0 z-30 mt-2 overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-popover) sm:inset-x-auto sm:right-0 sm:w-full sm:min-w-[26rem]">
           <div className="border-b border-hairline px-3 py-3">
             <div className="relative">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -510,7 +568,7 @@ function ProjectDropdown({
             </div>
           </div>
           <div
-            className={`${projectIdentityGrid} ${projectIdentityCols} border-b border-hairline bg-canvas/40 px-3.5 py-2 text-[10px] font-semibold tracking-wide text-muted uppercase`}
+            className={`${projectIdentityGrid} ${projectIdentityCols} border-b border-hairline bg-canvas/40 px-3.5 py-2 text-[11px] font-semibold tracking-wide text-muted uppercase`}
             aria-hidden="true"
           >
             <span>Project ID</span>
@@ -534,7 +592,7 @@ function ProjectDropdown({
                         <ProjectIdentityGrid
                           id={option.id}
                           name={option.name}
-                          idClass="text-[11px] font-semibold tabular-nums text-ink-soft"
+                          idClass="text-xs font-semibold tabular-nums text-ink-soft"
                           nameClass="line-clamp-2 text-[13px] font-medium leading-snug text-ink"
                         />
                       </span>
@@ -598,7 +656,7 @@ function ProjectProfileOverview({
               <FolderKanban className="h-6 w-6" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-medium tracking-wide text-muted">Project profile</p>
+              <p className="text-xs font-medium tracking-wide text-muted">Project profile</p>
               <h1
                 id="project-profile-heading"
                 className="mt-0.5 break-words text-xl font-semibold tracking-tight text-ink sm:text-[1.375rem] sm:leading-8"
@@ -606,7 +664,7 @@ function ProjectProfileOverview({
                 {project.name}
               </h1>
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-md border border-hairline bg-surface px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-soft">
+                <span className="inline-flex items-center rounded-md border border-hairline bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-soft">
                   {project.id}
                 </span>
                 <span className="text-[12px] text-muted">{text(project.client_bu)}</span>
@@ -615,7 +673,7 @@ function ProjectProfileOverview({
                 <Pill bg={tone.bg} fg={tone.fg}>
                   {project.status}
                 </Pill>
-                <span className="inline-flex h-6 items-center rounded-md border border-hairline bg-surface/80 px-2 text-[11px] font-medium text-ink-soft">
+                <span className="inline-flex h-6 items-center rounded-md border border-hairline bg-surface/80 px-2 text-xs font-medium text-ink-soft">
                   {text(project.contract_category)}
                 </span>
                 {hiddenByFilters && <FlagBadge>Hidden by current list filters</FlagBadge>}
@@ -634,7 +692,7 @@ function ProjectProfileOverview({
       </div>
 
       <div className="border-b border-hairline bg-canvas/25 px-5 py-4 sm:px-6">
-        <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Reporting context</p>
+        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">Reporting context</p>
         <p className="mt-0.5 text-[12px] text-muted">Choose months and switch project without returning to the portfolio.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col">
@@ -646,7 +704,7 @@ function ProjectProfileOverview({
               selected={selectedMonths}
               onChange={onMonthsChange}
             />
-            <p className="mt-1.5 text-[11px] text-muted">Allocations and KPIs use {windowLabel.toLowerCase()}</p>
+            <p className="mt-1.5 text-xs text-muted">Allocations and KPIs use {windowLabel.toLowerCase()}</p>
           </div>
           <div className="flex min-w-0 flex-col lg:max-w-none">{switcher}</div>
         </div>
@@ -658,7 +716,7 @@ function ProjectProfileOverview({
             <h2 className="text-[13px] font-semibold text-ink">Project record</h2>
             <p className="mt-0.5 text-[12px] text-muted">Master data from Project Track for this engagement</p>
           </div>
-          <span className="text-[11px] tabular-nums text-muted">{integer(monthsWithHours)} months with hours</span>
+          <span className="text-xs tabular-nums text-muted">{integer(monthsWithHours)} months with hours</span>
         </div>
 
         <div className="mt-4 overflow-hidden rounded-xl border border-hairline bg-surface">
@@ -678,7 +736,7 @@ function ProjectProfileOverview({
           </div>
           {description ? (
             <div className="border-t border-hairline bg-canvas/20 px-4 py-4 sm:px-5">
-              <h3 className="text-[10px] font-semibold tracking-wide text-muted uppercase">Description</h3>
+              <h3 className="text-[11px] font-semibold tracking-wide text-muted uppercase">Description</h3>
               <p className="mt-2 max-w-3xl whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">{description}</p>
             </div>
           ) : null}
@@ -732,12 +790,13 @@ function ProjectWorkPanel({ detail }: { detail: ProjectDetail }) {
           titleId="project-team-heading"
           subtitle={`${employeeCount} ${employeeCount === 1 ? "employee" : "employees"} · ${monthCount} reporting ${monthCount === 1 ? "month" : "months"}. Hover a month header for the full label.`}
           actions={
-            <span className="hidden text-[11px] text-muted sm:inline">Sticky employee column</span>
+            <span className="hidden text-xs text-muted sm:inline">Sticky employee column</span>
           }
         >
           <PanelScrollFrame
             axis="both"
             flush
+            viewportClass={PROJECT_TEAM_VIEWPORT}
             hint={
               monthCount > 6
                 ? `Showing ${monthCount} months — scroll horizontally for earlier or later months. · means no record; ${EM_DASH} is unverified hours.`
@@ -752,7 +811,7 @@ function ProjectWorkPanel({ detail }: { detail: ProjectDetail }) {
           title="Monthly hours trend"
           titleId="project-trend-heading"
           subtitle="Total planned hours per month across the full project reporting window."
-          actions={<span className="text-[11px] tabular-nums text-muted">{trendCount} months</span>}
+          actions={<span className="text-xs tabular-nums text-muted">{trendCount} months</span>}
         >
           <PanelScrollFrame
             axis="x"
@@ -806,7 +865,7 @@ export function ProjectsPage() {
       <button
         type="button"
         onClick={() => url.setValues({ project: null })}
-        className="-mb-2 inline-flex h-8 w-fit items-center gap-1.5 rounded-lg pr-2 text-[12px] font-medium text-muted transition-colors hover:text-ink"
+        className="-mb-2 inline-flex h-8 touch:h-11 w-fit items-center gap-1.5 rounded-lg pr-2 text-[12px] font-medium text-muted transition-colors hover:text-ink"
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         All projects

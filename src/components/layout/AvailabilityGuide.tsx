@@ -2,6 +2,7 @@ import { useEffect, useId } from "react";
 import { BookOpen, CircleDashed, X, type LucideIcon } from "lucide-react";
 
 import type { AvailabilityStatus } from "../../api/types";
+import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { StatusChip } from "../ui/primitives";
 import { STATUS_ICON, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
 
@@ -82,6 +83,7 @@ function GuideCard({
 export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const titleId = useId();
   const dialogId = useId();
+  const dialogRef = useDialogFocus(open);
 
   useEffect(() => {
     if (!open) return;
@@ -103,15 +105,17 @@ export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClo
     <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-6">
       <button type="button" aria-label="Close guide" className="absolute inset-0 bg-ink/45" onClick={onClose} />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         id={dialogId}
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative flex max-h-[min(90vh,40rem)] w-full max-w-lg flex-col rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:max-w-xl sm:rounded-2xl"
+        className="relative flex pb-[env(safe-area-inset-bottom)] outline-none max-h-[min(90dvh,40rem)] w-full max-w-lg flex-col rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:max-w-xl sm:rounded-2xl"
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-5 py-4 sm:px-6">
           <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted">Reference</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted">Reference</p>
             <h2 id={titleId} className="mt-0.5 text-base font-semibold text-ink">
               Availability statuses
             </h2>
@@ -122,7 +126,7 @@ export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClo
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
+            className="grid h-8 w-8 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -166,7 +170,7 @@ export function AvailabilityGuideTrigger({
       onClick={onOpen}
       title={expanded ? undefined : "Availability statuses"}
       className={`flex w-full items-center gap-2.5 rounded-lg text-[12px] font-medium text-muted transition-colors hover:bg-canvas hover:text-ink ${
-        expanded ? "h-9 px-2.5" : "mx-auto h-9 w-9 justify-center px-0"
+        expanded ? "h-9 touch:h-11 px-2.5" : "mx-auto h-9 w-9 touch:h-11 touch:w-11 justify-center px-0"
       }`}
     >
       <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.8} />

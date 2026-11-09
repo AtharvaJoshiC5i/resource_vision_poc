@@ -92,14 +92,14 @@ export function MultiSelect({
           <div className="flex items-center justify-between border-b border-hairline px-2 pb-1.5 pt-1 text-xs">
             <button
               type="button"
-              className="rounded px-1 py-0.5 font-medium text-primary hover:text-purple-indigo"
+              className="rounded px-1 py-0.5 touch:px-2 touch:py-2.5 font-medium text-primary hover:text-purple-indigo"
               onClick={() => onChange(options.map((o) => o.value))}
             >
               Select all
             </button>
             <button
               type="button"
-              className="rounded px-1 py-0.5 font-medium text-muted hover:text-ink"
+              className="rounded px-1 py-0.5 touch:px-2 touch:py-2.5 font-medium text-muted hover:text-ink"
               onClick={() => onChange([])}
             >
               Clear
@@ -111,7 +111,7 @@ export function MultiSelect({
               const checked = selected.includes(option.value);
               return (
                 <li key={option.value}>
-                  <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-ink-soft hover:bg-canvas">
+                  <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 touch:py-2.5 text-sm text-ink-soft hover:bg-canvas">
                     <input
                       type="checkbox"
                       className="peer sr-only"

@@ -18,7 +18,7 @@ import {
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { CONTRACT_CHART_COLOR, CONTRACT_ORDER, STATUS_ICON, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
-import { AvailabilityMatrixTable, MatrixLegend } from "./AvailabilityMatrix";
+import { AvailabilityMatrixView, MatrixLegend } from "./AvailabilityMatrix";
 import { MonthlyStackedChart, type ChartMonth } from "./MonthlyStackedChart";
 
 const PAGE_SIZE = 50;
@@ -112,7 +112,8 @@ export function AvailabilityPage() {
         onReset={resetAll}
         resetDisabled={activeFilters === 0}
       >
-        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <div className="@container">
+        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-6">
           <MultiSelect
             label="Reporting month"
             options={(options.data?.months ?? []).map((m) => ({
@@ -154,6 +155,7 @@ export function AvailabilityPage() {
             onChange={(values) => url.setValues({ loc: values })}
           />
         </div>
+        </div>
       </FilterCard>
 
       <SummarySection
@@ -164,7 +166,8 @@ export function AvailabilityPage() {
         {overview.error ? (
           <ErrorBlock message={overview.error} onRetry={overview.reload} />
         ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+          <div className="@container">
+          <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-6">
             <KpiCard
               label="Employees with records"
               value={kpis?.employees_with_records}
@@ -186,6 +189,7 @@ export function AvailabilityPage() {
                 />
               );
             })}
+          </div>
           </div>
         )}
       </SummarySection>
@@ -238,7 +242,7 @@ export function AvailabilityPage() {
           <EmptyBlock message="No employees match the current filters" />
         ) : (
           <>
-            <AvailabilityMatrixTable matrix={matrix.data} />
+            <AvailabilityMatrixView matrix={matrix.data} />
             <Pagination
               page={matrix.data.page}
               pages={matrix.data.pages}

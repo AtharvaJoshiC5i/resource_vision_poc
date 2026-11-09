@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Touch screens: used for 16px inputs (no iOS zoom on focus) and larger tap targets. */
+@custom-variant touch (@media (pointer: coarse));
+/* Landscape phones: tighter vertical spacing when the window is short. */
+@custom-variant short (@media (max-height: 480px));
+
 /*
  * Product colour scheme. This is the only place colours are defined.
  * `static` keeps every variable in the output, including those referenced only from JavaScript

@@ -6,17 +6,17 @@ import { EM_DASH, integer } from "../../lib/format";
 import { STATUS_STYLE } from "../../lib/status";
 
 export const fieldClass =
-  "h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm text-ink placeholder:text-muted transition-colors hover:border-muted/60 focus:border-primary focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-primary/15 disabled:bg-canvas disabled:text-muted";
+  "h-9 touch:h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm touch:text-base text-ink placeholder:text-muted transition-colors hover:border-muted/60 focus:border-primary focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-primary/15 disabled:bg-canvas disabled:text-muted";
 
 export const labelClass = "mb-1.5 block text-xs font-medium text-ink-soft";
 
 /** Secondary button: bordered, neutral. */
 export const buttonClass =
-  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-surface px-3 text-[12px] font-medium text-ink transition-colors hover:bg-canvas disabled:opacity-40 disabled:hover:bg-surface";
+  "inline-flex h-8 touch:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-surface px-3 text-[12px] font-medium text-ink transition-colors hover:bg-canvas disabled:opacity-40 disabled:hover:bg-surface";
 
 /** Tertiary button: text only, for actions that sit inside a card header. */
 export const quietButtonClass =
-  "inline-flex h-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-soft hover:text-purple-indigo disabled:text-muted disabled:hover:bg-transparent";
+  "inline-flex h-8 touch:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-soft hover:text-purple-indigo disabled:text-muted disabled:hover:bg-transparent";
 
 export function Card({
   title,
@@ -35,7 +35,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-hairline bg-surface p-5 shadow-(--shadow-card) sm:p-6 ${className}`}>
+    <section className={`rounded-xl border border-hairline bg-surface p-5 shadow-(--shadow-card) sm:p-6 short:p-4 ${className}`}>
       {(title || actions) && (
         <header className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
@@ -82,7 +82,7 @@ export function SectionHeader({
 /** Status letter chip; the same mark is used in the matrix, legends, cards and badges. */
 export function StatusChip({ status, size = "sm" }: { status: AvailabilityStatus; size?: "sm" | "md" }) {
   const style = STATUS_STYLE[status];
-  const dims = size === "md" ? "h-6 w-6 text-xs" : "h-5 w-5 text-[11px]";
+  const dims = size === "md" ? "h-6 w-6 text-xs" : "h-5 w-5 text-xs";
   return (
     <span
       aria-hidden="true"
@@ -104,7 +104,7 @@ export function StatusBadge({ status }: { status: AvailabilityStatus }) {
     >
       <span
         aria-hidden="true"
-        className="grid h-4 w-4 shrink-0 place-items-center rounded-sm bg-surface/70 text-[10px] font-semibold leading-none"
+        className="grid h-4 w-4 shrink-0 place-items-center rounded-sm bg-surface/70 text-[11px] font-semibold leading-none"
       >
         {style.letter}
       </span>
@@ -260,6 +260,16 @@ export function InfoTile({ value, label }: { value: ReactNode; label: string }) 
   );
 }
 
+/** Label above a value, for the stacked card lists that replace wide tables on phones. */
+export function MetaField({ label, value, className = "" }: { label: string; value: ReactNode; className?: string }) {
+  return (
+    <div className={`min-w-0 ${className}`}>
+      <dt className="text-xs text-muted">{label}</dt>
+      <dd className="mt-0.5 break-words text-[13px] font-medium tabular-nums text-ink-soft">{value}</dd>
+    </div>
+  );
+}
+
 export function Pill({
   children,
   bg,
@@ -288,7 +298,7 @@ export function Pill({
 /** Neutral badge for data-quality flags such as a missing HR match. */
 export function FlagBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex h-5 items-center whitespace-nowrap rounded-md bg-warning-soft px-1.5 text-[11px] font-medium text-warning-ink">
+    <span className="inline-flex h-5 items-center whitespace-nowrap rounded-md bg-warning-soft px-1.5 text-xs font-medium text-warning-ink">
       {children}
     </span>
   );

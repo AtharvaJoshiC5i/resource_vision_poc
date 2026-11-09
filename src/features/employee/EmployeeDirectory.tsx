@@ -22,9 +22,11 @@ import {
   FlagBadge,
   KpiCard,
   LoadingBlock,
+  MetaField,
   Pagination,
   SectionHeader,
   StatusBadge,
+  buttonClass,
   fieldClass,
   labelClass,
   quietButtonClass,
@@ -35,31 +37,13 @@ import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { EM_DASH, hours, integer, text } from "../../lib/format";
 import { SelectField } from "../../components/ui/MultiSelect";
+import { useDialogFocus } from "../../hooks/useDialogFocus";
+import { resolveDirectoryReportingMonth } from "./directoryMonth";
 import { STATUS_ICON, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
 
 const PAGE_SIZE = 25;
 const LIST_LIMIT = 5;
 const NO_RECORD = "No record";
-
-function monthKeyFromIso(iso: string | undefined): number | null {
-  if (!iso) return null;
-  const [year, month] = iso.split("-").map(Number);
-  return year && month ? year * 100 + month : null;
-}
-
-export function resolveDirectoryReportingMonth(
-  window: MonthOption[],
-  monthParam: string,
-  today: string | undefined,
-): number | undefined {
-  if (monthParam) {
-    const parsed = Number(monthParam);
-    if (window.some((m) => m.key === parsed)) return parsed;
-  }
-  const todayKey = monthKeyFromIso(today);
-  if (todayKey !== null && window.some((m) => m.key === todayKey)) return todayKey;
-  return window[0]?.key;
-}
 
 function ReportingMonthField({
   value,
@@ -102,6 +86,12 @@ function ReportingMonthField({
 
 type SortKey = "name" | "utilisation" | "projects" | "available";
 const SORT_KEYS: SortKey[] = ["name", "utilisation", "projects", "available"];
+const SORT_LABELS: Record<SortKey, string> = {
+  name: "Employee",
+  utilisation: "Allocation",
+  projects: "Projects",
+  available: "Available from",
+};
 
 function initialsOf(name: string) {
   const parts = name.split(/\s+/).filter(Boolean);
@@ -153,7 +143,8 @@ function DirectorySummary({
         title={`Team in ${monthLabel}`}
         subtitle="Headline counts for this month. Use filters below the summary to narrow the table."
       />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+      <div className="@container">
+      <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2 @3xl:grid-cols-4 @7xl:grid-cols-7">
         {tiles.map((tile) => {
           const isAll = tile.value === "";
           return (
@@ -169,6 +160,7 @@ function DirectorySummary({
             />
           );
         })}
+      </div>
       </div>
       <div className="mt-3">{children}</div>
     </section>
@@ -245,9 +237,15 @@ function ActNowModal({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open, onClose]);
+  const dialogRef = useDialogFocus(open);
 
   if (!open) return null;
 
@@ -255,10 +253,12 @@ function ActNowModal({
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/40" onClick={onClose} />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="act-now-dialog-title"
-        className="relative flex max-h-[min(85vh,28rem)] w-full max-w-md flex-col rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:rounded-2xl"
+        className="relative flex pb-[env(safe-area-inset-bottom)] outline-none max-h-[min(85dvh,28rem)] w-full max-w-md flex-col rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:rounded-2xl"
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-5 py-4">
           <div>
@@ -270,7 +270,7 @@ function ActNowModal({
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
+            className="grid h-8 w-8 touch:h-11 touch:w-11 place-items-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
@@ -294,7 +294,7 @@ function ActNowBar({
   onFreeing: () => void;
 }) {
   const alertBtn =
-    "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45";
+    "inline-flex h-9 touch:h-11 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45";
   return (
     <div className="flex flex-wrap gap-2">
       <button
@@ -367,6 +367,7 @@ function SortHeader({
   active,
   descending,
   align = "left",
+  className = "",
   onSort,
 }: {
   label: string;
@@ -374,6 +375,7 @@ function SortHeader({
   active: boolean;
   descending: boolean;
   align?: "left" | "right";
+  className?: string;
   onSort: (key: SortKey) => void;
 }) {
   const Icon = !active ? ChevronsUpDown : descending ? ArrowDown : ArrowUp;
@@ -381,12 +383,12 @@ function SortHeader({
     <th
       scope="col"
       aria-sort={active ? (descending ? "descending" : "ascending") : "none"}
-      className={`${tableHeadClass} ${align === "right" ? "text-right" : ""}`}
+      className={`${tableHeadClass} ${align === "right" ? "text-right" : ""} ${className}`}
     >
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`-mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-ink ${active ? "text-ink" : ""}`}
+        className={`-mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5 hover:text-ink ${active ? "text-ink" : ""}`}
       >
         {label}
         <Icon aria-hidden="true" className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />
@@ -612,7 +614,7 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
       >
         <div className="mb-5 rounded-xl border border-hairline bg-canvas/25 p-4 sm:p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Find employees</p>
+            <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">Find employees</p>
             {filtering && (
               <button
                 type="button"
@@ -624,12 +626,13 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
               </button>
             )}
           </div>
+          <div className="@container">
           <div
             role="group"
             aria-label="Employee filters"
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:items-end"
+            className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-6 @5xl:items-end"
           >
-            <div className="min-w-0 sm:col-span-2 xl:col-span-2">
+            <div className="min-w-0 @md:col-span-2">
               <label htmlFor="employee-directory-search" className={labelClass}>
                 Search
               </label>
@@ -676,16 +679,97 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
               onChange={(v) => setFilter({ loc: v || null })}
             />
           </div>
+          </div>
         </div>
 
         {visible.length === 0 ? (
           <EmptyBlock message="No employees match these filters" />
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-hairline" tabIndex={0} role="region" aria-label="Employee directory">
+          <>
+          <div className="mb-3 flex items-end gap-2 md:hidden">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="employee-directory-sort" className={labelClass}>
+                Sort by
+              </label>
+              <select
+                id="employee-directory-sort"
+                value={sort}
+                onChange={(event) => {
+                  const key = event.target.value as SortKey;
+                  url.setValues({ sort: key === "name" ? null : key, dir: key === "name" ? null : "desc", page: null });
+                }}
+                className={fieldClass}
+              >
+                {SORT_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {SORT_LABELS[key]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              type="button"
+              onClick={() => url.setValues({ dir: descending ? null : "desc", page: null })}
+              aria-label={descending ? "Sorted descending, switch to ascending" : "Sorted ascending, switch to descending"}
+              className={`${buttonClass} h-9 w-9 shrink-0 px-0 touch:h-11 touch:w-11`}
+            >
+              {descending ? <ArrowDown aria-hidden="true" className="h-4 w-4" /> : <ArrowUp aria-hidden="true" className="h-4 w-4" />}
+            </button>
+          </div>
+
+          <ul aria-label="Employee directory" className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline md:hidden">
+            {visible.map((row) => (
+              <li key={row.key} className="relative transition-colors hover:bg-canvas">
+                <div className="flex flex-col gap-3 px-3 py-3">
+                  <div className="flex items-start gap-3">
+                    <Avatar name={row.name} />
+                    <div className="min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => onOpen(row.key)}
+                        title={`Open ${row.name}`}
+                        className="block max-w-full break-words text-left font-medium text-ink after:absolute after:inset-0 after:content-['']"
+                      >
+                        {row.name}
+                      </button>
+                      <p className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums text-muted">
+                        {row.code}
+                        {!row.hr_match && <FlagBadge>No HR match</FlagBadge>}
+                      </p>
+                    </div>
+                    {row.status ? (
+                      <StatusBadge status={row.status as AvailabilityStatus} />
+                    ) : (
+                      <span className="text-muted" title={`No Project Track record in ${data.month_label}`}>
+                        {EM_DASH}
+                      </span>
+                    )}
+                  </div>
+                  <AllocationCell row={row} />
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                    <MetaField label="Available from" value={<AvailableFromCell row={row} currentMonth={data.month} />} />
+                    <MetaField label="Projects" value={row.projects === null ? EM_DASH : row.projects} />
+                    <MetaField label="Grade" value={text(row.grade)} />
+                    <MetaField label="Location" value={text(row.location)} />
+                    <MetaField label="Capability" value={text(row.capability)} className="col-span-2" />
+                  </dl>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-lg border border-hairline md:block" tabIndex={0} role="region" aria-label="Employee directory">
             <table className="w-full min-w-[1000px] border-collapse text-sm">
               <thead>
                 <tr>
-                  <SortHeader label="Employee" sortKey="name" active={sort === "name"} descending={descending} onSort={onSort} />
+                  <SortHeader
+                    label="Employee"
+                    sortKey="name"
+                    active={sort === "name"}
+                    descending={descending}
+                    className="sticky left-0 z-10"
+                    onSort={onSort}
+                  />
                   <th scope="col" className={tableHeadClass}>
                     Grade
                   </th>
@@ -716,7 +800,10 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
               <tbody className="divide-y divide-hairline">
                 {visible.map((row) => (
                   <tr key={row.key} className="group cursor-pointer text-ink-soft hover:bg-canvas" onClick={() => onOpen(row.key)}>
-                    <th scope="row" className="px-3 py-2.5 text-left font-normal">
+                    <th
+                      scope="row"
+                      className="sticky left-0 z-[1] bg-surface px-3 py-2.5 text-left font-normal shadow-[inset_-1px_0_0_var(--color-hairline)] group-hover:bg-canvas"
+                    >
                       <button
                         type="button"
                         onClick={(event) => {
@@ -766,6 +853,7 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         <Pagination

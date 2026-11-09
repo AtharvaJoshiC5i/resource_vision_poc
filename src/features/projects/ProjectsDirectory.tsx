@@ -20,8 +20,10 @@ import {
   ErrorBlock,
   KpiCard,
   LoadingBlock,
+  MetaField,
   PageHeader,
   Pill,
+  buttonClass,
   fieldClass,
   labelClass,
   tableHeadClass,
@@ -74,11 +76,75 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
   }, [rows, sort]);
 
   return (
-    <div className="overflow-auto rounded-lg border border-hairline" tabIndex={0} role="region" aria-label="Project portfolio">
+    <>
+    <div className="mb-3 flex items-end gap-2 md:hidden">
+      <div className="min-w-0 flex-1">
+        <label htmlFor="project-portfolio-sort" className={labelClass}>
+          Sort by
+        </label>
+        <select
+          id="project-portfolio-sort"
+          value={sort.key}
+          onChange={(event) => setSort((prev) => ({ ...prev, key: event.target.value as SortKey }))}
+          className={fieldClass}
+        >
+          {COLUMNS.map((col) => (
+            <option key={col.key} value={col.key}>
+              {col.label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="button"
+        onClick={() => setSort((prev) => ({ ...prev, dir: prev.dir === "asc" ? "desc" : "asc" }))}
+        aria-label={sort.dir === "asc" ? "Sorted ascending, switch to descending" : "Sorted descending, switch to ascending"}
+        className={`${buttonClass} h-9 w-9 shrink-0 px-0 touch:h-11 touch:w-11`}
+      >
+        {sort.dir === "asc" ? <ArrowUp aria-hidden="true" className="h-4 w-4" /> : <ArrowDown aria-hidden="true" className="h-4 w-4" />}
+      </button>
+    </div>
+
+    <ul aria-label="Project portfolio" className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline md:hidden">
+      {sorted.map((row) => {
+        const tone = projectStatusTone(row.status);
+        return (
+          <li key={row.id} className="relative transition-colors hover:bg-canvas">
+            <div className="flex flex-col gap-3 px-3 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => onOpen(row.id)}
+                    className="block max-w-full break-words text-left font-medium text-ink after:absolute after:inset-0 after:content-['']"
+                  >
+                    {row.name}
+                  </button>
+                  <p className="text-xs tabular-nums text-muted">{row.id}</p>
+                </div>
+                <Pill bg={tone.bg} fg={tone.fg}>
+                  {row.status}
+                </Pill>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                <MetaField label="Client or business unit" value={row.client_bu} className="col-span-2" />
+                <MetaField label="Contract category" value={row.contract_category} className="col-span-2" />
+                <MetaField label="Start" value={shortDate(row.start)} />
+                <MetaField label="End" value={shortDate(row.end)} />
+                <MetaField label="Employees" value={row.employees} />
+                <MetaField label="Planned h" value={hours(row.planned_hours)} />
+              </dl>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+
+    <div className="hidden overflow-auto rounded-lg border border-hairline md:block" tabIndex={0} role="region" aria-label="Project portfolio">
       <table className="w-full min-w-[920px] border-collapse text-sm">
         <thead className="sticky top-0 z-10 bg-surface">
           <tr>
-            {COLUMNS.map((col) => {
+            {COLUMNS.map((col, colIndex) => {
               const active = sort.key === col.key;
               const Icon = !active ? ChevronsUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
               return (
@@ -86,11 +152,11 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                   key={col.key}
                   scope="col"
                   aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                  className={`${tableHeadClass} ${col.numeric ? "text-right" : "text-left"}`}
+                  className={`${tableHeadClass} ${col.numeric ? "text-right" : "text-left"} ${colIndex === 0 ? "sticky left-0 z-20" : ""}`}
                 >
                   <button
                     type="button"
-                    className={`-mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-ink ${active ? "text-ink" : ""}`}
+                    className={`-mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5 hover:text-ink ${active ? "text-ink" : ""}`}
                     onClick={() =>
                       setSort((prev) => ({ key: col.key, dir: prev.key === col.key && prev.dir === "asc" ? "desc" : "asc" }))
                     }
@@ -122,7 +188,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                 }}
                 className="group cursor-pointer text-ink-soft hover:bg-canvas"
               >
-                <td className="px-3 py-2.5">
+                <td className="sticky left-0 z-[1] bg-surface px-3 py-2.5 shadow-[inset_-1px_0_0_var(--color-hairline)] group-hover:bg-canvas">
                   <span className="font-medium text-ink group-hover:text-purple-indigo">{row.name}</span>
                 </td>
                 <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-muted">{row.id}</td>
@@ -146,6 +212,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
         </tbody>
       </table>
     </div>
+    </>
   );
 }
 
@@ -195,7 +262,8 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
         onReset={resetFilters}
         resetDisabled={activeFilters === 0}
       >
-        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+        <div className="@container">
+        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-4 @md:grid-cols-2 @4xl:grid-cols-4 @4xl:items-end">
           <MultiSelect
             label="Reporting month"
             options={(options.data?.months ?? []).map((m) => ({
@@ -235,13 +303,15 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
             </div>
           </div>
         </div>
+        </div>
       </FilterCard>
 
       {overview.error ? (
         <ErrorBlock message={overview.error} onRetry={overview.reload} />
       ) : (
         <SummarySection id="projects-summary-heading" subtitle="Projects matching the current filters">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="@container">
+          <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2 @4xl:grid-cols-4">
             <KpiCard
               label="Total projects"
               icon={FolderKanban}
@@ -274,6 +344,7 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
               caption="Across the projects in view"
               loading={!kpis}
             />
+          </div>
           </div>
         </SummarySection>
       )}

@@ -45,11 +45,12 @@ import { CHART_AXIS, CHART_AXIS_TITLE, CHART_CURSOR, CHART_GRID } from "../../li
 import { EM_DASH, compactMonth, hours, integer, shortDate, text } from "../../lib/format";
 import { STATUS_STYLE, projectStatusTone } from "../../lib/status";
 import { PageZones } from "../../components/layout/pageZones";
-import { EmployeeDirectory, resolveDirectoryReportingMonth } from "./EmployeeDirectory";
+import { EmployeeDirectory } from "./EmployeeDirectory";
+import { resolveDirectoryReportingMonth } from "./directoryMonth";
 
 const AVAILABILITY_CHART_HEIGHT = 220;
 /** Shared scroll region when Projects and Availability sit side by side. */
-const WORK_PANEL_SCROLL = "max-h-[min(22rem,42vh)] overflow-y-auto overflow-x-auto";
+const WORK_PANEL_SCROLL = "overflow-x-auto xl:max-h-[min(22rem,42dvh)] xl:overflow-y-auto";
 
 function isStatus(value: string | null): value is AvailabilityStatus {
   return value !== null && value in STATUS_STYLE;
@@ -88,7 +89,7 @@ function MonthlyTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMon
         role="region"
         aria-label="Monthly allocation and availability"
       >
-        <table className="w-full min-w-[20rem] border-collapse text-[11.5px]">
+        <table className="w-full min-w-[20rem] border-collapse text-xs">
           <thead className="sticky top-0 z-10 bg-canvas shadow-[0_1px_0_var(--color-hairline)]">
             <tr>
               <th className={`${th} text-left`} scope="col">
@@ -196,7 +197,7 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
         {totals.map((s) => (
           <li
             key={s.key}
-            className="inline-flex min-w-0 items-center gap-2 rounded-md border border-hairline bg-canvas px-2.5 py-1.5 text-[11.5px]"
+            className="inline-flex min-w-0 items-center gap-2 rounded-md border border-hairline bg-canvas px-2.5 py-1.5 text-xs"
           >
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm" style={{ background: s.fill }} />
             <span className="text-muted">{s.label}</span>
@@ -309,7 +310,7 @@ function AvailabilityOverTime({
       type="button"
       aria-pressed={view === value}
       onClick={() => setView(value)}
-      className={`h-7 rounded-md px-3 text-[12px] font-medium transition-colors ${
+      className={`h-7 touch:h-10 rounded-md px-3 text-[12px] font-medium transition-colors ${
         view === value ? "bg-surface text-ink shadow-(--shadow-card)" : "text-muted hover:text-ink"
       }`}
     >
@@ -536,7 +537,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
                         aria-expanded={expanded}
                         aria-label={`${expanded ? "Hide" : "Show"} monthly breakdown for ${p.name}`}
                         onClick={() => toggle(p.id)}
-                        className="-ml-1 grid h-5 w-5 shrink-0 place-items-center rounded text-muted transition-colors hover:bg-canvas hover:text-ink"
+                        className="-ml-1 grid h-5 w-5 touch:h-10 touch:w-10 shrink-0 place-items-center rounded text-muted transition-colors hover:bg-canvas hover:text-ink"
                       >
                         <ChevronRight aria-hidden="true" className={`h-3.5 w-3.5 ${expanded ? "rotate-90" : ""}`} />
                       </button>
@@ -618,12 +619,12 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
 }
 
 /* ----------------------------------------------------------------------------- profile header */
-const profileControlLabel = "mb-1.5 block text-[11px] font-medium tracking-wide text-ink-soft";
+const profileControlLabel = "mb-1.5 block text-xs font-medium tracking-wide text-ink-soft";
 
 function ProfileDetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas/40 px-3 py-2.5">
-      <dt className="text-[11px] text-muted">{label}</dt>
+      <dt className="text-xs text-muted">{label}</dt>
       <dd className="mt-1 break-words text-[13px] font-medium leading-snug text-ink">{value}</dd>
     </div>
   );
@@ -687,7 +688,7 @@ function EmployeeProfileOverview({
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {profile.status && (
-                  <span className="inline-flex h-6 items-center gap-1.5 rounded-md border border-hairline bg-surface px-2 text-[11px] font-medium text-ink-soft">
+                  <span className="inline-flex h-6 items-center gap-1.5 rounded-md border border-hairline bg-surface px-2 text-xs font-medium text-ink-soft">
                     <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-success" />
                     {profile.status}
                   </span>
@@ -744,7 +745,7 @@ function EmployeeProfileOverview({
         <p className="mt-0.5 text-[12px] text-muted">HR master data and contract context for the selected month</p>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted">Role and organisation</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Role and organisation</h3>
             <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ProfileDetailField label="Grade" value={text(profile.grade)} />
               <ProfileDetailField label="Primary capability" value={text(profile.primary_capability)} />
@@ -755,7 +756,7 @@ function EmployeeProfileOverview({
             </dl>
           </div>
           <div>
-            <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted">Contact and employment</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Contact and employment</h3>
             <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ProfileDetailField label="Location" value={text(profile.location)} />
               <ProfileDetailField label="Country" value={text(profile.country)} />
@@ -906,20 +907,20 @@ function EmployeeDropdown({
         <span className="flex min-w-0 flex-1 items-center gap-2">
           <span
             aria-hidden="true"
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-soft text-[10px] font-semibold text-purple-indigo"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-purple-indigo"
           >
             {profile ? initialsOf(profile.name) : "—"}
           </span>
           <span className="min-w-0 flex-1 text-left">
             <span className="block truncate text-[13px] font-medium text-ink">{profile?.name ?? "Select employee"}</span>
-            {profile && <span className="block truncate text-[11px] tabular-nums text-muted">{profile.code}</span>}
+            {profile && <span className="block truncate text-xs tabular-nums text-muted">{profile.code}</span>}
           </span>
         </span>
         <UserRound aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
         <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 text-muted ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1.5 w-full min-w-[20rem] overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-popover) sm:min-w-[22rem]">
+        <div className="absolute inset-x-0 z-30 mt-1.5 overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-popover) sm:inset-x-auto sm:right-0 sm:w-full sm:min-w-[22rem]">
           <div className="relative border-b border-hairline p-2">
             <Search aria-hidden="true" className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
             <input
@@ -932,7 +933,7 @@ function EmployeeDropdown({
               }}
               placeholder="Search by name or code"
               aria-label="Search employees"
-              className="h-9 w-full rounded-lg border border-transparent bg-canvas pl-9 pr-3 text-sm text-ink placeholder:text-muted focus:border-primary focus:bg-surface focus:outline-none"
+              className="h-9 w-full rounded-lg border border-transparent bg-canvas pl-9 pr-3 text-sm touch:text-base text-ink placeholder:text-muted focus:border-primary focus:bg-surface focus:outline-none"
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   setOpen(false);
@@ -972,7 +973,7 @@ function EmployeeDropdown({
                       role="option"
                       aria-selected={active}
                       tabIndex={-1}
-                      className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 text-left ${
+                      className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 touch:py-2.5 text-left ${
                         highlighted ? "bg-canvas" : "hover:bg-canvas"
                       }`}
                       onMouseDown={(event) => event.preventDefault()}
@@ -1051,7 +1052,7 @@ export function EmployeePage() {
       <button
         type="button"
         onClick={() => url.setValues({ emp: null })}
-        className="-mb-2 inline-flex h-8 w-fit items-center gap-1.5 rounded-lg pr-2 text-[12px] font-medium text-muted transition-colors hover:text-ink"
+        className="-mb-2 inline-flex h-8 touch:h-11 w-fit items-center gap-1.5 rounded-lg pr-2 text-[12px] font-medium text-muted transition-colors hover:text-ink"
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
         All employees
