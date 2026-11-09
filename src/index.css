@@ -1,30 +1,149 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import "tailwindcss";
 
+/*
+ * Product colour scheme. This is the only place colours are defined.
+ * `static` keeps every variable in the output, including those referenced only from JavaScript
+ * (status colours, chart fills).
+ */
+@theme static {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Type scale, one step tighter than the Tailwind default for a dense dashboard. */
+  --text-xs: 0.71875rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.125rem;
+  --text-xl--line-height: 1.625rem;
+  --text-2xl: 1.375rem;
+  --text-2xl--line-height: 1.875rem;
+
+  /* Primary */
+  --color-primary: #6800e0;
+  --color-ink: #0c0c0c;
+  --color-canvas: #f6f6f6;
+
+  /* Secondary */
+  --color-lavender-light: #bc9bec;
+  --color-lavender-medium: #8c51e1;
+  --color-purple-indigo: #420897;
+  --color-border: #cccccc;
+  --color-ink-soft: #242424;
+  --color-indigo-dark: #1f004c;
+
+  /* Functional */
+  --color-warning: #ea792d;
+  --color-caution: #ffce00;
+  --color-error: #e84646;
+  --color-success: #0aa50e;
+
+  /* Neutral interface surface */
+  --color-surface: #ffffff;
+
+  /* Semantic aliases */
+  --color-text: var(--color-ink);
+  --color-text-secondary: var(--color-ink-soft);
+  --color-button-primary: var(--color-primary);
+  --color-button-primary-hover: var(--color-purple-indigo);
+  --color-divider: var(--color-border);
+  --color-hero: var(--color-indigo-dark);
+
+  /* Third text role for meta and captions; 4.7:1 on canvas, 5.1:1 on surface. */
+  --color-muted: color-mix(in srgb, var(--color-ink-soft) 66%, var(--color-surface));
+  /* Dividers inside surfaces; the full border colour is kept for form controls. */
+  --color-hairline: color-mix(in srgb, var(--color-border) 50%, var(--color-surface));
+
+  /* Tinted status surfaces and their readable text shades (all text pairs reach 4.5:1). */
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+  --color-lavender-soft: color-mix(in srgb, var(--color-lavender-light) 26%, var(--color-surface));
+  --color-success-soft: color-mix(in srgb, var(--color-success) 11%, var(--color-surface));
+  --color-success-ink: color-mix(in srgb, var(--color-success) 58%, var(--color-ink));
+  --color-warning-soft: color-mix(in srgb, var(--color-warning) 13%, var(--color-surface));
+  --color-warning-ink: color-mix(in srgb, var(--color-warning) 58%, var(--color-ink));
+  --color-error-soft: color-mix(in srgb, var(--color-error) 11%, var(--color-surface));
+  --color-error-ink: color-mix(in srgb, var(--color-error) 70%, var(--color-ink));
+
+  --shadow-card: 0 1px 2px color-mix(in srgb, var(--color-ink) 5%, transparent);
+  --shadow-popover:
+    0 0 0 1px var(--color-hairline),
+    0 12px 32px -12px color-mix(in srgb, var(--color-ink) 22%, transparent);
+}
+
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-size-adjust: 100%;
   }
 
-  body {
-    font-family: 'Inter', sans-serif;
-    font-optical-sizing: auto;
-    font-weight: 400;
-    font-style: normal;
-    line-height: 1.6;
-    color: #1e293b;
-    background-color: #f8fafc;
+  @media (min-width: 768px) {
+    html,
+    body {
+      overflow: hidden;
+    }
   }
 
-  /*
-   * Headings and labels stay semibold via component classes.
-   * Body copy at 400 weight is easier to scan in dense tables.
-   */
-  h1,
-  h2,
-  h3 {
-    line-height: 1.35;
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink-soft);
+    background: var(--color-canvas);
+    font-size: 13px;
+    line-height: 1.5;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  button {
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  svg.lucide {
+    stroke-width: 1.75;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-hairline) 25%, var(--color-canvas) 50%, var(--color-hairline) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
   }
 }

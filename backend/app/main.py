@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import DatabaseError, ping_database
-from app.repository.resource_vision_repository import load_resource_vision_bundle
+from app.rv.routes import router as resource_vision_router
 
 app = FastAPI(
     title="Resource Vision Data API",
@@ -32,19 +34,12 @@ def health() -> dict[str, str]:
 @app.get("/api/database/status")
 def database_status() -> dict[str, object]:
     try:
-        details = ping_database()
+        ping_database()
     except DatabaseError as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
+        logging.getLogger("resource_vision").error("Database status check failed: %s", error)
+        raise HTTPException(status_code=503, detail="The database is currently unavailable.") from error
 
-    return {
-        "connected": True,
-        **details,
-    }
+    return {"connected": True}
 
 
-@app.get("/api/data/resource-vision")
-def resource_vision_bundle() -> dict[str, object]:
-    try:
-        return load_resource_vision_bundle()
-    except DatabaseError as error:
-        raise HTTPException(status_code=503, detail=str(error)) from error
+app.include_router(resource_vision_router)

@@ -34,39 +34,21 @@ AZURE_SQL_TRUST_SERVER_CERTIFICATE=yes
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Endpoints:
+Endpoints (all GET, read-only, localhost):
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | API liveness |
-| GET | `/api/database/status` | Tests Azure SQL connection |
-| GET | `/api/data/resource-vision` | Mapped Famstack, Project Track, derived ZingHR |
+| Path | Purpose |
+|------|---------|
+| `/health` | Liveness |
+| `/api/database/status` | Azure SQL connectivity check |
+| `/api/rv/meta` | Today, capacity, reporting window, data-quality counts |
+| `/api/rv/availability/{options,overview,matrix}` | Availability page |
+| `/api/rv/employees/search`, `/api/rv/employees/{key}` | Employee 360 |
+| `/api/rv/projects/options`, `/api/rv/projects`, `/api/rv/projects/{id}` | Projects page |
 
-## Tables
+Environment (optional): `RV_DATA_SOURCE` (`azure` default, or `demo`), `RV_CAPACITY_HOURS` (176), `RV_CACHE_SECONDS` (60).
 
-- `dbo.famstack_billable`
-- `dbo.famstack_non_billable`
-- `dbo.project_track_proposals_table`
+## Tests
 
-## SQL layer
-
-Production bundle queries in `app/queries/resource_vision_sql.py` follow the
-read patterns in the repo root file **`resource_vision_queries.sql`** (Q14/Q15
-historical Famstack, Q18 provisional Project Track lines, Q19 employee
-dimensions). They emit the same JSON shape as `src/data/famstack.json`,
-`projectTrack.json`, and derived `zinghr.json`.
-
-| Query | Mock target | Azure source |
-|-------|-------------|--------------|
-| `FAMSTACK_BILLABLE_AGGREGATED` | `FamstackRecord` (billable) | `dbo.famstack_billable` |
-| `FAMSTACK_NON_BILLABLE_AGGREGATED` | `FamstackRecord` (non-billable) | `dbo.famstack_non_billable` |
-| `PROJECT_TRACK_RESOURCE_VISION` | `ProjectTrackRecord` | `dbo.project_track_proposals_table` |
-| `EMPLOYEE_MASTER_FROM_SOURCES` | `ZingHREmployee` (partial) | PT + Famstack employee codes |
-
-`project_id` uses **proposal number** when present so historical Famstack rows
-and planned Project Track rows share the same project key (as in the POC mock).
-
-The API response includes `planning` (`currentMonth`, `monthKeys`, …) for the
-Famstack / Project Track month boundary on the frontend.
-
-Capacity configuration still comes from the frontend mock JSON (no Azure table in scope).
+```bash
+python -m pytest tests -q
+```

@@ -114,3 +114,28 @@ def fetch_all(
             raise DatabaseError(f"Query failed: {error}") from error
 
         return [_row_to_dict(cursor, row) for row in cursor.fetchall()]
+
+
+def fetch_rows(
+    query: str,
+    parameters: tuple[Any, ...] | None = None,
+    settings: Settings | None = None,
+) -> list[dict[str, Any]]:
+    """Run a fixed, read-only query exactly as written (no TOP wrapper).
+
+    Used by the Resource Vision engine, whose queries are plain SELECTs over
+    the two source tables. Never pass user input as part of ``query``.
+    """
+    active_settings = settings or get_settings()
+
+    with connect(active_settings) as connection:
+        cursor = connection.cursor()
+        try:
+            if parameters:
+                cursor.execute(query, parameters)
+            else:
+                cursor.execute(query)
+        except pyodbc.Error as error:
+            raise DatabaseError(f"Query failed: {error}") from error
+
+        return [_row_to_dict(cursor, row) for row in cursor.fetchall()]

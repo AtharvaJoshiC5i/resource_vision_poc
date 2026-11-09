@@ -1,0 +1,782 @@
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarClock,
+  CalendarDays,
+  ChevronRight,
+  ChevronsUpDown,
+  CircleDashed,
+  Search,
+  TriangleAlert,
+  UsersRound,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+
+import type { AvailabilityStatus, DirectoryRow, EmployeeDirectory as DirectoryData, Meta, MonthOption } from "../../api/types";
+import {
+  Card,
+  EmptyBlock,
+  ErrorBlock,
+  FlagBadge,
+  KpiCard,
+  LoadingBlock,
+  Pagination,
+  SectionHeader,
+  StatusBadge,
+  fieldClass,
+  labelClass,
+  quietButtonClass,
+  tableHeadClass,
+  type KpiTone,
+} from "../../components/ui/primitives";
+import { useApi } from "../../hooks/useApi";
+import { useUrlFilters } from "../../hooks/useUrlFilters";
+import { EM_DASH, hours, integer, text } from "../../lib/format";
+import { SelectField } from "../../components/ui/MultiSelect";
+import { STATUS_ICON, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
+
+const PAGE_SIZE = 25;
+const LIST_LIMIT = 5;
+const NO_RECORD = "No record";
+
+function monthKeyFromIso(iso: string | undefined): number | null {
+  if (!iso) return null;
+  const [year, month] = iso.split("-").map(Number);
+  return year && month ? year * 100 + month : null;
+}
+
+export function resolveDirectoryReportingMonth(
+  window: MonthOption[],
+  monthParam: string,
+  today: string | undefined,
+): number | undefined {
+  if (monthParam) {
+    const parsed = Number(monthParam);
+    if (window.some((m) => m.key === parsed)) return parsed;
+  }
+  const todayKey = monthKeyFromIso(today);
+  if (todayKey !== null && window.some((m) => m.key === todayKey)) return todayKey;
+  return window[0]?.key;
+}
+
+function ReportingMonthField({
+  value,
+  options,
+  onChange,
+}: {
+  value: number;
+  options: MonthOption[];
+  onChange: (month: number) => void;
+}) {
+  const id = useId();
+  const selectedLabel = options.find((m) => m.key === value)?.label ?? "";
+  return (
+    <div className="min-w-0 w-full sm:max-w-sm">
+      <label htmlFor={id} className={labelClass}>
+        Reporting month
+      </label>
+      <div className="relative">
+        <CalendarDays
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
+        />
+        <select
+          id={id}
+          value={String(value)}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className={`${fieldClass} pl-9 font-medium text-ink`}
+          aria-label={selectedLabel ? `Reporting month: ${selectedLabel}` : "Reporting month"}
+        >
+          {options.map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.has_data ? option.label : `${option.label} (no PT data)`}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+type SortKey = "name" | "utilisation" | "projects" | "available";
+const SORT_KEYS: SortKey[] = ["name", "utilisation", "projects", "available"];
+
+function initialsOf(name: string) {
+  const parts = name.split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1][0] ?? "") : "")).toUpperCase();
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-canvas text-xs font-medium text-ink-soft ring-1 ring-inset ring-hairline"
+    >
+      {initialsOf(name)}
+    </span>
+  );
+}
+
+function shareOf(count: number, total: number) {
+  if (total <= 0) return "0%";
+  const pct = (count / total) * 100;
+  return pct > 0 && pct < 1 ? "<1%" : `${Math.round(pct)}%`;
+}
+
+/* ----------------------------------------------------------------------------- summary metrics */
+interface DirectoryMetric {
+  value: string;
+  label: string;
+  count: number;
+  status?: AvailabilityStatus;
+  icon: LucideIcon;
+  tone?: KpiTone;
+}
+
+function DirectorySummary({
+  monthLabel,
+  total,
+  tiles,
+  children,
+}: {
+  monthLabel: string;
+  total: number;
+  tiles: DirectoryMetric[];
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby="directory-status-heading">
+      <SectionHeader
+        id="directory-status-heading"
+        title={`Team in ${monthLabel}`}
+        subtitle="Headline counts for this month. Use filters below the summary to narrow the table."
+      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+        {tiles.map((tile) => {
+          const isAll = tile.value === "";
+          return (
+            <KpiCard
+              key={tile.label}
+              label={tile.label}
+              value={tile.count}
+              status={tile.status}
+              icon={tile.icon}
+              tone={tile.tone}
+              emphasis={isAll ? undefined : shareOf(tile.count, total)}
+              caption={isAll ? "Everyone in the directory" : "of employees"}
+            />
+          );
+        })}
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
+  );
+}
+
+/* ----------------------------------------------------------------------------- short lists */
+function PersonButton({ name, code, onOpen, children }: { name: string; code: string; onOpen: () => void; children: ReactNode }) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onOpen}
+        className="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-canvas sm:rounded-lg"
+      >
+        <Avatar name={name} />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-ink">{name}</span>
+          <span className="block truncate text-xs tabular-nums text-muted">{code}</span>
+        </span>
+        {children}
+      </button>
+    </li>
+  );
+}
+
+function AttentionListBody({ data, onOpen }: { data: DirectoryData["attention"]; onOpen: (key: string) => void }) {
+  if (data.items.length === 0) return <EmptyBlock message="Nobody needs attention this month" />;
+  return (
+    <ul className="-mx-2 divide-y divide-hairline">
+      {data.items.slice(0, LIST_LIMIT).map((item) => (
+        <PersonButton key={item.key} name={item.name} code={item.code} onOpen={() => onOpen(item.key)}>
+          <span className="flex shrink-0 flex-col items-end gap-1 text-right">
+            <StatusBadge status={item.status} />
+            <span className="max-w-52 break-words text-xs text-muted">{item.reason}</span>
+          </span>
+        </PersonButton>
+      ))}
+    </ul>
+  );
+}
+
+function FreeingListBody({ data, onOpen }: { data: DirectoryData["freeing"]; onOpen: (key: string) => void }) {
+  if (data.items.length === 0) return <EmptyBlock message="No capacity is expected to free up in this period" />;
+  return (
+    <ul className="-mx-2 divide-y divide-hairline">
+      {data.items.slice(0, LIST_LIMIT).map((item) => (
+        <PersonButton key={item.key} name={item.name} code={item.code} onOpen={() => onOpen(item.key)}>
+          <span className="flex shrink-0 flex-col items-end gap-0.5">
+            <span className="text-sm font-medium tabular-nums text-success-ink">+{hours(item.hours_freed)} h</span>
+            <span className="text-xs text-muted">from {item.label}</span>
+          </span>
+        </PersonButton>
+      ))}
+    </ul>
+  );
+}
+
+function ActNowModal({
+  open,
+  onClose,
+  title,
+  subtitle,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle: string;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/40" onClick={onClose} />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="act-now-dialog-title"
+        className="relative flex max-h-[min(85vh,28rem)] w-full max-w-md flex-col rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:rounded-2xl"
+      >
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-5 py-4">
+          <div>
+            <h2 id="act-now-dialog-title" className="text-[14px] font-semibold text-ink">
+              {title}
+            </h2>
+            <p className="mt-0.5 text-[12px] text-muted">{subtitle}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </header>
+        <div className="min-h-0 overflow-y-auto px-5 py-3">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function ActNowBar({
+  attentionTotal,
+  freeingTotal,
+  onAttention,
+  onFreeing,
+}: {
+  attentionTotal: number;
+  freeingTotal: number;
+  onAttention: () => void;
+  onFreeing: () => void;
+}) {
+  const alertBtn =
+    "inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45";
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button
+        type="button"
+        disabled={attentionTotal === 0}
+        onClick={onAttention}
+        className={`${alertBtn} border-error/25 bg-error-soft text-error-ink hover:border-error/40`}
+      >
+        <TriangleAlert aria-hidden="true" className="h-4 w-4 shrink-0" />
+        Needs attention
+        <span className="rounded-md bg-surface/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums">{integer(attentionTotal)}</span>
+      </button>
+      <button
+        type="button"
+        disabled={freeingTotal === 0}
+        onClick={onFreeing}
+        className={`${alertBtn} border-success/25 bg-success-soft text-success-ink hover:border-success/40`}
+      >
+        <CalendarClock aria-hidden="true" className="h-4 w-4 shrink-0" />
+        Freeing up soon
+        <span className="rounded-md bg-surface/80 px-1.5 py-0.5 text-xs font-semibold tabular-nums">{integer(freeingTotal)}</span>
+      </button>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------- directory table */
+function AllocationCell({ row }: { row: DirectoryRow }) {
+  if (row.utilisation === null || row.status === null) return <span className="text-muted">{EM_DASH}</span>;
+  const percent = Math.round(row.utilisation * 100);
+  const width = Math.min(Math.max(row.utilisation, 0), 1) * 100;
+  const color = STATUS_STYLE[row.status].chart;
+  return (
+    <div className="min-w-40" title={`${hours(row.planned_hours)} of ${hours(row.capacity_hours)} h planned`}>
+      <div className="flex items-baseline justify-between gap-3 text-xs">
+        <span className="font-medium tabular-nums text-ink">{percent}%</span>
+        <span className="tabular-nums text-muted">
+          {hours(row.planned_hours)} / {hours(row.capacity_hours)} h
+        </span>
+      </div>
+      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-hairline" aria-hidden="true">
+        <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
+      </div>
+    </div>
+  );
+}
+
+function AvailableFromCell({ row, currentMonth }: { row: DirectoryRow; currentMonth: number }) {
+  if (row.status === null || row.available_from === null) {
+    return (
+      <span className="text-muted" title="No free capacity found in the reporting window">
+        {EM_DASH}
+      </span>
+    );
+  }
+  const now = row.available_from.month === currentMonth;
+  return (
+    <span className="block whitespace-nowrap leading-5">
+      <span className={`block font-medium ${now ? "text-success-ink" : "text-ink"}`}>
+        {now ? "Now" : row.available_from.label}
+      </span>
+      <span className="block text-xs tabular-nums text-muted">{hours(row.available_from.remaining_hours)} h free</span>
+    </span>
+  );
+}
+
+function SortHeader({
+  label,
+  sortKey,
+  active,
+  descending,
+  align = "left",
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  active: boolean;
+  descending: boolean;
+  align?: "left" | "right";
+  onSort: (key: SortKey) => void;
+}) {
+  const Icon = !active ? ChevronsUpDown : descending ? ArrowDown : ArrowUp;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (descending ? "descending" : "ascending") : "none"}
+      className={`${tableHeadClass} ${align === "right" ? "text-right" : ""}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`-mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-ink ${active ? "text-ink" : ""}`}
+      >
+        {label}
+        <Icon aria-hidden="true" className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />
+      </button>
+    </th>
+  );
+}
+
+function compare(a: DirectoryRow, b: DirectoryRow, key: SortKey): number {
+  const nullsLast = (x: number | null, y: number | null) => (x === null ? (y === null ? 0 : 1) : y === null ? -1 : x - y);
+  switch (key) {
+    case "utilisation":
+      return nullsLast(a.utilisation, b.utilisation);
+    case "projects":
+      return nullsLast(a.projects, b.projects);
+    case "available":
+      return nullsLast(a.available_from?.month ?? null, b.available_from?.month ?? null);
+    default:
+      return a.name.localeCompare(b.name) || a.code.localeCompare(b.code);
+  }
+}
+
+function distinct(rows: DirectoryRow[], pick: (row: DirectoryRow) => string | null) {
+  return [...new Set(rows.map(pick).filter((v): v is string => !!v))].sort((x, y) => x.localeCompare(y));
+}
+
+function FilterSelect({
+  label,
+  allLabel,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  allLabel: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="min-w-0">
+      <label htmlFor={id} className={labelClass}>
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={`${fieldClass} ${value ? "font-medium text-ink" : "text-ink-soft"}`}
+      >
+        <option value="">{allLabel}</option>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------- page body */
+const STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  ...STATUS_ORDER.map((s) => ({ value: s, label: s })),
+  { value: NO_RECORD, label: "No record" },
+];
+
+export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void }) {
+  const url = useUrlFilters();
+  const meta = useApi<Meta>("/meta");
+  const monthParam = url.getOne("month");
+  const reportingMonth = useMemo(
+    () => resolveDirectoryReportingMonth(meta.data?.window ?? [], monthParam, meta.data?.today),
+    [meta.data, monthParam],
+  );
+
+  useEffect(() => {
+    if (!meta.data || monthParam || reportingMonth === undefined) return;
+    url.setValues({ month: String(reportingMonth) });
+  }, [meta.data, monthParam, reportingMonth, url]);
+
+  const api = useApi<DirectoryData>(
+    reportingMonth !== undefined ? "/employees/directory" : null,
+    reportingMonth !== undefined ? { month: reportingMonth } : {},
+  );
+  const [attentionOpen, setAttentionOpen] = useState(false);
+  const [freeingOpen, setFreeingOpen] = useState(false);
+
+  const query = url.getOne("q");
+  const status = url.getOne("status");
+  const capability = url.getOne("cap");
+  const grade = url.getOne("grade");
+  const location = url.getOne("loc");
+  const sortParam = url.getOne("sort") as SortKey;
+  const sort: SortKey = SORT_KEYS.includes(sortParam) ? sortParam : "name";
+  const descending = url.getOne("dir") === "desc";
+  const page = Math.max(1, Number(url.getOne("page")) || 1);
+
+  const rows = useMemo(() => api.data?.rows ?? [], [api.data]);
+  const capabilities = useMemo(() => distinct(rows, (r) => r.capability), [rows]);
+  const grades = useMemo(() => distinct(rows, (r) => r.grade), [rows]);
+  const locations = useMemo(() => distinct(rows, (r) => r.location), [rows]);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const list = rows.filter(
+      (r) =>
+        (!needle || r.name.toLowerCase().includes(needle) || r.code.toLowerCase().includes(needle)) &&
+        (!status || (status === NO_RECORD ? r.status === null : r.status === status)) &&
+        (!capability || r.capability === capability) &&
+        (!grade || r.grade === grade) &&
+        (!location || r.location === location),
+    );
+    const sorted = [...list].sort((a, b) => compare(a, b, sort));
+    return descending ? sorted.reverse() : sorted;
+  }, [rows, query, status, capability, grade, location, sort, descending]);
+
+  if (api.error) return <ErrorBlock message={api.error} onRetry={api.reload} />;
+  if (!api.data) return <LoadingBlock height={520} label="Loading employees" />;
+
+  const data = api.data;
+  const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const current = Math.min(page, pages);
+  const visible = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+  const filtering = Boolean(query || status || capability || grade || location);
+
+  const setFilter = (updates: Record<string, string | null>) => url.setValues({ ...updates, page: null });
+  const onSort = (key: SortKey) => {
+    if (sort === key) url.setValues({ dir: descending ? null : "desc", page: null });
+    else url.setValues({ sort: key === "name" ? null : key, dir: key === "name" ? null : "desc", page: null });
+  };
+
+  const k = data.kpis;
+  const statusTile = (status: AvailabilityStatus, label: string, count: number): DirectoryMetric => ({
+    value: status,
+    label,
+    count,
+    status,
+    icon: STATUS_ICON[status],
+  });
+  const tiles: DirectoryMetric[] = [
+    { value: "", label: "All employees", count: k.total, icon: UsersRound },
+    statusTile("Fully Available", "Fully available", k.fully_available),
+    statusTile("Partially Available", "Partially available", k.partially_available),
+    statusTile("Fully Committed", "Fully committed", k.fully_committed),
+    statusTile("Over-allocated", "Over-allocated", k.over_allocated),
+    statusTile("Unverified", "Unverified", k.unverified),
+    { value: NO_RECORD, label: "No record", count: k.no_record, icon: CircleDashed, tone: "neutral" },
+  ];
+  const openFromAlert = (key: string) => {
+    setAttentionOpen(false);
+    setFreeingOpen(false);
+    onOpen(key);
+  };
+
+  return (
+    <>
+      <section aria-labelledby="act-now-heading">
+        <SectionHeader
+          id="act-now-heading"
+          title="Act now"
+          subtitle="Open an alert to review people who need a decision or will free up capacity soon"
+        />
+        <ActNowBar
+          attentionTotal={data.attention.total}
+          freeingTotal={data.freeing.total}
+          onAttention={() => setAttentionOpen(true)}
+          onFreeing={() => setFreeingOpen(true)}
+        />
+      </section>
+
+      <ActNowModal
+        open={attentionOpen}
+        onClose={() => setAttentionOpen(false)}
+        title="Needs attention"
+        subtitle="Over-allocated or unverified this month"
+      >
+        <AttentionListBody data={data.attention} onOpen={openFromAlert} />
+      </ActNowModal>
+      <ActNowModal
+        open={freeingOpen}
+        onClose={() => setFreeingOpen(false)}
+        title="Freeing up soon"
+        subtitle={`Remaining capacity grows within the next ${data.freeing.months} months`}
+      >
+        <FreeingListBody data={data.freeing} onOpen={openFromAlert} />
+      </ActNowModal>
+
+      <section aria-labelledby="reporting-month-heading" className="rounded-xl border border-hairline bg-linear-to-b from-canvas/60 to-surface px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0 max-w-xl">
+            <h2 id="reporting-month-heading" className="text-[13px] font-semibold text-ink">
+              Reporting month
+            </h2>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted">
+              Status pills, allocation columns, and summary KPIs below all use this month. Changing it reloads the directory.
+            </p>
+          </div>
+          {meta.data && reportingMonth !== undefined && (
+            <ReportingMonthField
+              value={reportingMonth}
+              options={meta.data.window}
+              onChange={(month) => url.setValues({ month: String(month), page: null })}
+            />
+          )}
+        </div>
+      </section>
+
+      <DirectorySummary monthLabel={data.month_label} total={k.total} tiles={tiles}>
+
+      <Card
+        title="Employees"
+        titleId="employees-directory-heading"
+        subtitle={`Allocation for ${data.month_label}. Select a person to open their profile.`}
+        actions={
+          <span className="text-[12px] tabular-nums text-muted" aria-live="polite">
+            <span className="font-medium text-ink-soft">{integer(filtered.length)}</span>
+            {filtering ? ` of ${integer(rows.length)}` : ""} {filtered.length === 1 ? "employee" : "employees"}
+          </span>
+        }
+      >
+        <div className="mb-5 rounded-xl border border-hairline bg-canvas/25 p-4 sm:p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[11px] font-semibold tracking-wide text-ink-soft uppercase">Find employees</p>
+            {filtering && (
+              <button
+                type="button"
+                onClick={() => url.setValues({ q: null, status: null, cap: null, grade: null, loc: null, page: null })}
+                className={quietButtonClass}
+              >
+                <X aria-hidden="true" className="h-3.5 w-3.5" />
+                Clear filters
+              </button>
+            )}
+          </div>
+          <div
+            role="group"
+            aria-label="Employee filters"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 xl:items-end"
+          >
+            <div className="min-w-0 sm:col-span-2 xl:col-span-2">
+              <label htmlFor="employee-directory-search" className={labelClass}>
+                Search
+              </label>
+              <div className="relative">
+                <Search
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+                />
+                <input
+                  id="employee-directory-search"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setFilter({ q: event.target.value || null })}
+                  placeholder="Name or code"
+                  className={`${fieldClass} pl-9`}
+                />
+              </div>
+            </div>
+            <SelectField
+              label="Availability status"
+              value={status}
+              options={STATUS_FILTER_OPTIONS}
+              onChange={(value) => setFilter({ status: value || null })}
+            />
+            <FilterSelect
+              label="Capability"
+              allLabel="All capabilities"
+              value={capability}
+              options={capabilities}
+              onChange={(v) => setFilter({ cap: v || null })}
+            />
+            <FilterSelect
+              label="Grade"
+              allLabel="All grades"
+              value={grade}
+              options={grades}
+              onChange={(v) => setFilter({ grade: v || null })}
+            />
+            <FilterSelect
+              label="Location"
+              allLabel="All locations"
+              value={location}
+              options={locations}
+              onChange={(v) => setFilter({ loc: v || null })}
+            />
+          </div>
+        </div>
+
+        {visible.length === 0 ? (
+          <EmptyBlock message="No employees match these filters" />
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-hairline" tabIndex={0} role="region" aria-label="Employee directory">
+            <table className="w-full min-w-[1000px] border-collapse text-sm">
+              <thead>
+                <tr>
+                  <SortHeader label="Employee" sortKey="name" active={sort === "name"} descending={descending} onSort={onSort} />
+                  <th scope="col" className={tableHeadClass}>
+                    Grade
+                  </th>
+                  <th scope="col" className={tableHeadClass}>
+                    Capability
+                  </th>
+                  <th scope="col" className={tableHeadClass}>
+                    Location
+                  </th>
+                  <th scope="col" className={tableHeadClass}>
+                    Status in {data.month_label}
+                  </th>
+                  <SortHeader label="Allocation" sortKey="utilisation" active={sort === "utilisation"} descending={descending} onSort={onSort} />
+                  <SortHeader
+                    label="Projects"
+                    sortKey="projects"
+                    active={sort === "projects"}
+                    descending={descending}
+                    align="right"
+                    onSort={onSort}
+                  />
+                  <SortHeader label="Available from" sortKey="available" active={sort === "available"} descending={descending} onSort={onSort} />
+                  <th scope="col" className={`${tableHeadClass} w-10`}>
+                    <span className="sr-only">Open</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {visible.map((row) => (
+                  <tr key={row.key} className="group cursor-pointer text-ink-soft hover:bg-canvas" onClick={() => onOpen(row.key)}>
+                    <th scope="row" className="px-3 py-2.5 text-left font-normal">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onOpen(row.key);
+                        }}
+                        className="flex w-full min-w-56 items-center gap-3 rounded text-left"
+                      >
+                        <Avatar name={row.name} />
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-ink group-hover:text-primary" title={row.name}>
+                            {row.name}
+                          </span>
+                          <span className="flex items-center gap-1.5 text-xs tabular-nums text-muted">
+                            {row.code}
+                            {!row.hr_match && <FlagBadge>No HR match</FlagBadge>}
+                          </span>
+                        </span>
+                      </button>
+                    </th>
+                    <td className="whitespace-nowrap px-3 py-2.5 align-middle">{text(row.grade)}</td>
+                    <td className="px-3 py-2.5 align-middle">{text(row.capability)}</td>
+                    <td className="whitespace-nowrap px-3 py-2.5 align-middle">{text(row.location)}</td>
+                    <td className="px-3 py-2.5 align-middle">
+                      {row.status ? (
+                        <StatusBadge status={row.status as AvailabilityStatus} />
+                      ) : (
+                        <span className="text-muted" title={`No Project Track record in ${data.month_label}`}>
+                          {EM_DASH}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 align-middle">
+                      <AllocationCell row={row} />
+                    </td>
+                    <td className="px-3 py-2.5 text-right align-middle tabular-nums">
+                      {row.projects === null ? EM_DASH : row.projects}
+                    </td>
+                    <td className="px-3 py-2.5 align-middle">
+                      <AvailableFromCell row={row} currentMonth={data.month} />
+                    </td>
+                    <td className="px-3 py-2.5 align-middle">
+                      <ChevronRight aria-hidden="true" className="h-4 w-4 text-border group-hover:text-primary" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <Pagination
+          page={current}
+          pages={pages}
+          total={filtered.length}
+          pageSize={PAGE_SIZE}
+          onChange={(next) => url.setValues({ page: next > 1 ? String(next) : null })}
+        />
+      </Card>
+      </DirectorySummary>
+    </>
+  );
+}
