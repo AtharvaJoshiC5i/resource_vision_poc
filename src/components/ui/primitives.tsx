@@ -40,7 +40,7 @@ export function Card({
         <header className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
           <div className="min-w-0">
             {title && (
-              <h2 id={titleId} className="text-[14px] font-semibold leading-6 text-ink">
+              <h2 id={titleId} className="text-[15px] font-semibold leading-6 text-ink">
                 {title}
               </h2>
             )}
@@ -69,7 +69,7 @@ export function SectionHeader({
   return (
     <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
       <div className="min-w-0">
-        <h2 id={id} className="text-[14px] font-semibold leading-6 text-ink">
+        <h2 id={id} className="text-[15px] font-semibold leading-6 text-ink">
           {title}
         </h2>
         {subtitle && <p className="text-[12px] leading-5 text-muted">{subtitle}</p>}

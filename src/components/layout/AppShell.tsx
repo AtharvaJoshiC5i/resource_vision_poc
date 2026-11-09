@@ -24,19 +24,7 @@ const NAV: { to: string; label: string; end: boolean; icon: LucideIcon }[] = [
 
 function BrandMark() {
   return (
-    <span aria-hidden="true" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary">
-      <svg viewBox="0 0 16 16" className="h-4 w-4" fill="var(--color-surface)">
-        <rect x="1" y="1" width="4" height="4" rx="1" />
-        <rect x="6" y="1" width="4" height="4" rx="1" opacity="0.45" />
-        <rect x="11" y="1" width="4" height="4" rx="1" />
-        <rect x="1" y="6" width="4" height="4" rx="1" opacity="0.45" />
-        <rect x="6" y="6" width="4" height="4" rx="1" />
-        <rect x="11" y="6" width="4" height="4" rx="1" opacity="0.45" />
-        <rect x="1" y="11" width="4" height="4" rx="1" />
-        <rect x="6" y="11" width="4" height="4" rx="1" opacity="0.45" />
-        <rect x="11" y="11" width="4" height="4" rx="1" opacity="0.45" />
-      </svg>
-    </span>
+    <img aria-hidden="true" src="/c5i-glyph.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
   );
 }
 
@@ -45,10 +33,9 @@ function Brand({ titleId, compact = false }: { titleId?: string; compact?: boole
     <div className="flex min-w-0 items-center gap-2.5">
       <BrandMark />
       <div className={`min-w-0 leading-tight ${compact ? "sr-only" : ""}`}>
-        <span id={titleId} className="block truncate text-sm font-semibold tracking-tight text-ink">
+        <span id={titleId} className="block truncate text-base font-semibold tracking-tight text-ink">
           Resource Vision
         </span>
-        <span className="block truncate text-[11px] text-muted">Workforce planning</span>
       </div>
     </div>
   );
@@ -80,7 +67,7 @@ function SidebarNav({
                   "flex h-9 items-center rounded-lg text-[13px] transition-colors",
                   compact ? "w-10 justify-center" : "w-full gap-3 px-2.5",
                   isActive
-                    ? "bg-primary-soft font-medium text-purple-indigo shadow-[inset_0_0_0_1px_rgba(99,91,255,0.12)]"
+                    ? "bg-primary-soft font-medium text-purple-indigo ring-1 ring-inset ring-primary/10"
                     : "text-ink-soft hover:bg-canvas hover:text-ink",
                 ].join(" ")
               }
@@ -202,10 +189,9 @@ function DesktopSidebar({ meta, onOpenGuide }: { meta: Meta | null | undefined; 
     >
       <div
         className={`relative flex h-14 shrink-0 items-center border-b border-hairline ${
-          expanded ? "justify-between gap-2 pl-3.5 pr-2.5" : "justify-center px-2"
+          expanded ? "justify-end gap-2 pl-3.5 pr-2.5" : "justify-center px-2"
         }`}
       >
-        <Brand compact={!expanded} />
         {expanded ? toggleButton : <div className="absolute right-1.5 top-1/2 -translate-y-1/2">{toggleButton}</div>}
       </div>
 
@@ -253,11 +239,11 @@ export function AppShell() {
       <AvailabilityGuidePanel open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden md:ml-[var(--rv-sidebar-width,4rem)]">
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-surface px-4 md:hidden">
+        <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-surface px-4 sm:px-6 lg:px-8">
           <Brand />
           <button
             type="button"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border text-ink hover:bg-canvas"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-border text-ink hover:bg-canvas md:hidden"
             aria-expanded={menuOpen}
             aria-controls={mobileNavId}
             aria-label={menuOpen ? "Close navigation" : "Open navigation"}
