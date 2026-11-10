@@ -294,7 +294,7 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
         resetDisabled={activeFilters === 0}
       >
         <div className="@container">
-        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-4 @md:grid-cols-2 @4xl:grid-cols-4 @4xl:items-end">
+        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
           <MultiSelect
             label="Reporting month"
             options={(options.data?.months ?? []).map((m) => ({
@@ -342,7 +342,7 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
       ) : (
         <SummarySection id="projects-summary-heading" subtitle="Projects matching the current filters">
           <div className="@container">
-          <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2 @4xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               label="Total projects"
               icon={FolderKanban}

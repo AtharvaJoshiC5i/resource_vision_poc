@@ -45,7 +45,7 @@ import { ProjectsDirectory } from "./ProjectsDirectory";
 
 const COVERAGE_DEFAULT = "All Projects";
 
-const profileControlLabel = "mb-1.5 block text-xs font-medium tracking-wide text-ink-soft";
+const profileControlLabel = "mb-1.5 block text-xs font-medium text-muted";
 
 /** Profile row: reporting months + project switcher share one control height. */
 const profileFilterTrigger = "!h-14 !min-h-14 items-center py-0";
@@ -106,7 +106,7 @@ function ProjectRecordSection({ title, children }: { title: string; children: Re
   return (
     <div className="min-w-0">
       <div className="border-b border-hairline bg-canvas/35 px-4 py-2 sm:px-5">
-        <h3 className="text-[11px] font-semibold tracking-wide text-muted uppercase">{title}</h3>
+        <h3 className="rv-eyebrow">{title}</h3>
       </div>
       <dl>{children}</dl>
     </div>
@@ -144,15 +144,19 @@ function ProjectProfileStats({
   ] as const;
 
   return (
-    <div role="group" aria-label="Project summary statistics" className="grid w-full grid-cols-3 rounded-xl border border-hairline bg-surface">
+    <div
+      role="group"
+      aria-label="Project summary statistics"
+      className="grid w-full grid-cols-3 overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]"
+    >
       {items.map((item, index) => (
         <div
           key={item.label}
           className={`flex min-w-0 flex-col justify-center px-3 py-3 sm:px-3.5 sm:py-3.5 ${index > 0 ? "border-l border-hairline" : ""}`}
         >
-          <span className="text-[11px] font-medium tracking-wide text-muted uppercase">{item.label}</span>
+          <span className="rv-eyebrow">{item.label}</span>
           <p className="mt-1 flex min-w-0 items-baseline gap-1">
-            <span className="truncate text-base font-semibold tabular-nums tracking-tight text-ink">{item.value}</span>
+            <span className="truncate text-sm font-semibold tabular-nums tracking-tight text-ink">{item.value}</span>
             {item.unit ? <span className="shrink-0 text-[12px] font-medium text-muted">{item.unit}</span> : null}
           </p>
           <span className="mt-0.5 text-[11px] leading-snug text-muted">{item.hint}</span>
@@ -559,7 +563,7 @@ function ProjectDropdown({
             </div>
           </div>
           <div
-            className={`${projectIdentityGrid} ${projectIdentityCols} border-b border-hairline bg-canvas/40 px-3.5 py-2 text-[11px] font-semibold tracking-wide text-muted uppercase`}
+            className={`${projectIdentityGrid} ${projectIdentityCols} rv-eyebrow border-b border-hairline bg-canvas/50 px-3.5 py-2`}
             aria-hidden="true"
           >
             <span>Project ID</span>
@@ -635,27 +639,27 @@ function ProjectProfileOverview({
   return (
     <section
       aria-labelledby="project-profile-heading"
-      className="overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card)"
+      className="overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]"
     >
-      <div className="border-b border-hairline bg-linear-to-b from-canvas/80 to-surface px-5 py-5 sm:px-6 sm:py-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
+      <div className="border-b border-hairline bg-linear-to-b from-canvas/80 to-surface px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
             <div
               aria-hidden="true"
-              className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-surface text-primary ring-1 ring-hairline shadow-(--shadow-card)"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface text-primary ring-1 ring-hairline shadow-(--shadow-card)"
             >
-              <FolderKanban className="h-6 w-6" />
+              <FolderKanban className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium tracking-wide text-muted">Project profile</p>
+              <p className="rv-eyebrow">Project profile</p>
               <h1
                 id="project-profile-heading"
-                className="mt-0.5 break-words text-xl font-semibold tracking-tight text-ink sm:text-[1.375rem] sm:leading-8"
+                className="mt-0.5 break-words text-lg font-medium tracking-tight text-ink sm:text-xl sm:leading-snug"
               >
                 {project.name}
               </h1>
               <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-md border border-hairline bg-surface px-2 py-0.5 text-xs font-semibold tabular-nums text-ink-soft">
+                <span className="rv-chip tabular-nums text-ink-soft">
                   {project.id}
                 </span>
                 <span className="text-[12px] text-muted">{text(project.client_bu)}</span>
@@ -664,7 +668,7 @@ function ProjectProfileOverview({
                 <Pill bg={tone.bg} fg={tone.fg}>
                   {project.status}
                 </Pill>
-                <span className="inline-flex h-6 items-center rounded-md border border-hairline bg-surface/80 px-2 text-xs font-medium text-ink-soft">
+                <span className="rv-chip h-6 bg-canvas/60 text-ink-soft">
                   {text(project.contract_category)}
                 </span>
                 {hiddenByFilters && <FlagBadge>Hidden by current list filters</FlagBadge>}
@@ -683,7 +687,7 @@ function ProjectProfileOverview({
       </div>
 
       <div className="border-b border-hairline bg-canvas/25 px-5 py-4 sm:px-6">
-        <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">Reporting context</p>
+        <p className="rv-eyebrow text-ink-soft">Reporting context</p>
         <p className="mt-0.5 text-[12px] text-muted">Choose months and switch project without returning to the portfolio.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col">
@@ -704,7 +708,7 @@ function ProjectProfileOverview({
       <div className="px-5 py-5 sm:px-6 sm:py-6">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-[13px] font-semibold text-ink">Project record</h2>
+            <h2 className="text-base font-medium text-ink">Project record</h2>
             <p className="mt-0.5 text-[12px] text-muted">Master data from Project Track for this engagement</p>
           </div>
           <span className="text-xs tabular-nums text-muted">{integer(monthsWithHours)} months with hours</span>
@@ -727,7 +731,7 @@ function ProjectProfileOverview({
           </div>
           {description ? (
             <div className="border-t border-hairline bg-canvas/20 px-4 py-4 sm:px-5">
-              <h3 className="text-[11px] font-semibold tracking-wide text-muted uppercase">Description</h3>
+              <h3 className="rv-eyebrow">Description</h3>
               <p className="mt-2 max-w-3xl whitespace-pre-wrap text-[13px] leading-relaxed text-ink-soft">{description}</p>
             </div>
           ) : null}
@@ -735,7 +739,7 @@ function ProjectProfileOverview({
       </div>
 
       <div className="border-t border-hairline bg-canvas/30 px-5 py-4 sm:px-6">
-        <h2 id="project-kpi-heading" className="text-[13px] font-semibold text-ink">
+        <h2 id="project-kpi-heading" className="text-base font-medium text-ink">
           Snapshot · {windowLabel}
         </h2>
         <p className="mt-0.5 text-[12px] text-muted">Key totals for the reporting months selected above</p>

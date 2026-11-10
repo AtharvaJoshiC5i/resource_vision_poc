@@ -79,7 +79,10 @@ export function MultiSelect({
         className={`${fieldClass} flex items-center justify-between gap-2 text-left ${open ? "border-primary ring-2 ring-primary/15" : ""} ${triggerClassName ?? ""}`}
       >
         <span className={`truncate ${selected.length === 0 ? "text-ink-soft" : "font-medium text-ink"}`}>{summary}</span>
-        <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 text-muted ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          aria-hidden="true"
+          className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
       </button>
 
       {open && (
@@ -87,7 +90,7 @@ export function MultiSelect({
           id={panelId}
           role="group"
           aria-label={`${label} options`}
-          className="absolute left-0 z-30 mt-1 w-full min-w-56 rounded-xl bg-surface p-1 shadow-(--shadow-popover)"
+          className="absolute left-0 z-30 mt-1 w-full min-w-56 rounded-xl border border-hairline bg-surface p-1 shadow-(--shadow-popover) ring-1 ring-inset ring-ink/[0.03]"
         >
           <div className="flex items-center justify-between border-b border-hairline px-2 pb-1.5 pt-1 text-xs">
             <button

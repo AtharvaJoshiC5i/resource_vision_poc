@@ -4,18 +4,18 @@ import { BookOpen, CircleDashed, X } from "lucide-react";
 import type { AvailabilityStatus } from "../../api/types";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { StatusBadge } from "../ui/primitives";
-import { STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
+import { STATUS_ORDER } from "../../lib/status";
 
 const STATUS_COPY: Record<AvailabilityStatus, { summary: string; detail: string }> = {
   "Fully Available": {
     summary: "No verified planned hours this month",
     detail:
-      "Valid allocation records with verified zero planned hours and full monthly capacity remaining. Uncommon when only non-zero efforts are recorded.",
+      "Allocation exists with verified zero planned hours, so full monthly capacity remains. Uncommon when only non-zero efforts are recorded.",
   },
   "Partially Available": {
     summary: "Some capacity remains after planned hours",
     detail:
-      "Verified planned hours are above zero and remaining hours are positive. The person can still take work within the 176 h monthly capacity.",
+      "Planned hours are above zero and remaining capacity is positive. The person can take more work within the 176 h monthly limit.",
   },
   "Fully Committed": {
     summary: "No remaining capacity this month",
@@ -23,12 +23,12 @@ const STATUS_COPY: Record<AvailabilityStatus, { summary: string; detail: string 
   },
   "Over-allocated": {
     summary: "Planned hours exceed monthly capacity",
-    detail: "Remaining hours are negative after verified planned effort is applied against the 176 h capacity.",
+    detail: "Remaining hours are negative after planned effort is applied against the 176 h capacity.",
   },
   Unverified: {
-    summary: "Hours or status could not be verified",
+    summary: "Planned hours are zero for the month",
     detail:
-      "Capacity or planned hours are unknown, HR is unmatched, records need review, or only placeholder rows exist.",
+      "When effort recorded for the month is 0 h, availability cannot be classified as available, committed, or over-allocated, so the status is Unverified.",
   },
 };
 
@@ -36,10 +36,10 @@ const NO_RECORD = {
   title: "No record",
   summary: "No Project Track row for this employee in the month",
   detail:
-    "The reporting month has data, but this person has no named allocation row (shown as — in the matrix). Distinct from months where Project Track has no data at all.",
+    "The month has data in scope, but this person has no allocation row (shown as — in the matrix). Different from a blank month with no Project Track data.",
 };
 
-function GuideRow({
+function GuideStatusCard({
   status,
   summary,
   detail,
@@ -48,28 +48,19 @@ function GuideRow({
   summary: string;
   detail: string;
 }) {
-  const accent = status ? STATUS_STYLE[status].chart : "var(--color-border)";
-
   return (
-    <li className="relative flex gap-4 px-5 py-4 sm:px-6 sm:py-[1.125rem]">
-      <span
-        aria-hidden="true"
-        className="absolute inset-y-3 left-0 w-[3px] rounded-r-full sm:inset-y-3.5"
-        style={{ backgroundColor: accent }}
-      />
-      <div className="min-w-0 flex-1 pl-2">
-        {status ? (
-          <StatusBadge status={status} />
-        ) : (
-          <span className="inline-flex h-6 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md bg-canvas px-2 text-xs font-medium text-ink-soft">
-            <CircleDashed aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted" strokeWidth={1.75} />
-            <span>{NO_RECORD.title}</span>
-          </span>
-        )}
-        <p className="mt-2 text-sm font-medium leading-snug text-ink-soft">{summary}</p>
-        <p className="mt-1.5 text-xs leading-[1.45] text-muted">{detail}</p>
-      </div>
-    </li>
+    <article className="rounded-xl border border-hairline bg-surface p-4 shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]">
+      {status ? (
+        <StatusBadge status={status} />
+      ) : (
+        <span className="rv-chip h-6 gap-1.5 text-ink-soft">
+          <CircleDashed aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted" strokeWidth={1.75} />
+          {NO_RECORD.title}
+        </span>
+      )}
+      <p className="mt-2.5 text-sm font-medium leading-snug text-ink-soft">{summary}</p>
+      <p className="mt-1.5 text-xs leading-relaxed text-muted">{detail}</p>
+    </article>
   );
 }
 
@@ -99,7 +90,7 @@ export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClo
       <button
         type="button"
         aria-label="Close guide"
-        className="absolute inset-0 bg-ink/40 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
       <div
@@ -109,40 +100,48 @@ export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClo
         id={dialogId}
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative flex pb-[env(safe-area-inset-bottom)] outline-none max-h-[min(90dvh,42rem)] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:max-w-xl sm:rounded-2xl"
+        className="relative flex max-h-[min(90dvh,40rem)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-hairline bg-canvas pb-[env(safe-area-inset-bottom)] shadow-(--shadow-popover) outline-none sm:max-w-lg sm:rounded-2xl"
       >
-        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-hairline px-5 py-5 sm:px-6">
-          <div className="min-w-0 pr-2">
-            <h2 id={titleId} className="text-lg font-medium leading-snug text-ink">
+        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-surface px-5 py-4 sm:px-6">
+          <div className="min-w-0">
+            <h2 id={titleId} className="text-base font-medium text-ink">
               Availability statuses
             </h2>
-            <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted">
-              How planned allocation appears in the matrix, KPIs, and Employee 360. Monthly capacity is 176 h per
-              employed month.
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              Definitions used in the matrix, summary KPIs, and Employee 360
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-9 w-9 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-full border border-transparent text-muted transition-colors hover:border-hairline hover:bg-canvas hover:text-ink"
+            className="grid h-8 w-8 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-full border border-transparent text-muted transition-colors hover:border-hairline hover:bg-canvas hover:text-ink"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </header>
-        <div className="rv-scroll min-h-0 flex-1 overflow-y-auto">
-          <ul className="divide-y divide-hairline">
+
+        <div className="rv-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <ul className="space-y-2.5" role="list">
             {STATUS_ORDER.map((status) => (
-              <GuideRow
-                key={status}
-                status={status}
-                summary={STATUS_COPY[status].summary}
-                detail={STATUS_COPY[status].detail}
-              />
+              <li key={status}>
+                <GuideStatusCard
+                  status={status}
+                  summary={STATUS_COPY[status].summary}
+                  detail={STATUS_COPY[status].detail}
+                />
+              </li>
             ))}
-            <GuideRow summary={NO_RECORD.summary} detail={NO_RECORD.detail} />
+            <li>
+              <GuideStatusCard summary={NO_RECORD.summary} detail={NO_RECORD.detail} />
+            </li>
           </ul>
         </div>
+
+        <footer className="shrink-0 border-t border-hairline bg-surface px-5 py-3 text-xs leading-relaxed text-muted sm:px-6">
+          Monthly capacity is <span className="font-medium tabular-nums text-ink-soft">176 h</span> for each employed
+          month in the reporting window.
+        </footer>
       </div>
     </div>
   );
@@ -161,11 +160,11 @@ export function AvailabilityGuideTrigger({
       type="button"
       onClick={onOpen}
       title={expanded ? undefined : "Availability statuses"}
-      className={`flex w-full items-center gap-2.5 rounded-lg text-[12px] font-medium text-muted transition-colors hover:bg-canvas hover:text-ink ${
+      className={`flex w-full items-center gap-2.5 rounded-lg text-xs font-medium text-muted transition-colors hover:bg-canvas hover:text-ink ${
         expanded ? "h-9 touch:h-11 px-2.5" : "mx-auto h-9 w-9 touch:h-11 touch:w-11 justify-center px-0"
       }`}
     >
-      <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.8} />
+      <BookOpen aria-hidden="true" className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} />
       {expanded && <span className="truncate">Availability statuses</span>}
     </button>
   );

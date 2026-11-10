@@ -3,26 +3,47 @@ import type { ReactNode } from "react";
 import { EM_DASH } from "../../lib/format";
 
 /** Default body copy in a data cell. */
-export const tableBodyText = "text-[13px] leading-5 text-ink-soft";
+export const tableBodyText = "text-sm leading-5 text-ink-soft";
 
 /** Secondary line (codes, captions). */
 export const tableBodyMeta = "text-xs leading-4 text-muted";
 
 /** Numbers that are not the row headline. */
-export const tableBodyNumeric = "text-[13px] leading-5 tabular-nums text-ink-soft";
+export const tableBodyNumeric = "text-sm leading-5 tabular-nums text-ink-soft";
 
 /** Counts, hours, totals. */
-export const tableBodyNumericStrong = "text-[13px] font-medium leading-5 tabular-nums text-ink";
+export const tableBodyNumericStrong = "text-sm font-medium leading-5 tabular-nums text-ink";
 
 /** IDs and reference codes. */
 export const tableBodyId = "text-xs leading-4 tabular-nums text-muted";
 
+export const chipClass = "rv-chip";
+
+export const metricPillClass = "rv-metric-pill";
+
+/** Planned hours consumed vs monthly capacity (Employee directory allocation column). */
+export function HoursMetricPill({
+  consumed,
+  capacity,
+  title,
+}: {
+  consumed: string;
+  capacity: string;
+  title?: string;
+}) {
+  const label = title ?? `${consumed} of ${capacity} hours planned this month`;
+  return (
+    <span className={metricPillClass} title={label} aria-label={label}>
+      <span className="font-medium text-ink">{consumed} h</span>
+      <span className="font-normal text-muted">of</span>
+      <span className="font-medium text-ink-soft">{capacity} h</span>
+    </span>
+  );
+}
+
 export function TableEmpty({ title }: { title?: string }) {
   return (
-    <span
-      className="inline-flex h-6 min-w-[1.625rem] items-center justify-center rounded-md bg-canvas/90 px-1.5 text-xs text-muted ring-1 ring-inset ring-hairline"
-      title={title}
-    >
+    <span className={`${chipClass} min-h-6 min-w-[1.75rem] justify-center text-muted`} title={title}>
       {EM_DASH}
     </span>
   );

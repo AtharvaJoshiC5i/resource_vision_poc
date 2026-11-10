@@ -19,7 +19,7 @@ import {
   Card,
   EmptyBlock,
   ErrorBlock,
-  FlagBadge,
+  HrMatchFlag,
   KpiCard,
   LoadingBlock,
   MetaField,
@@ -30,6 +30,7 @@ import {
   fieldClass,
   labelClass,
   quietButtonClass,
+  HoursMetricPill,
   TableEmpty,
   TableFrame,
   TableNumeric,
@@ -50,7 +51,7 @@ import { EM_DASH, hours, integer, text } from "../../lib/format";
 import { SelectField } from "../../components/ui/MultiSelect";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { resolveDirectoryReportingMonth } from "./directoryMonth";
-import { STATUS_ICON, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
+import { STATUS_ICON, STATUS_ORDER } from "../../lib/status";
 
 const PAGE_SIZE = 25;
 const LIST_LIMIT = 5;
@@ -155,7 +156,7 @@ function DirectorySummary({
         subtitle="Headline counts for this month. Use filters below the summary to narrow the table."
       />
       <div className="@container">
-      <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2 @3xl:grid-cols-4 @7xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
         {tiles.map((tile) => {
           const isAll = tile.value === "";
           return (
@@ -262,32 +263,32 @@ function ActNowModal({
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center p-0 sm:items-center sm:p-4">
-      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/40" onClick={onClose} />
+      <button type="button" aria-label="Close" className="absolute inset-0 bg-ink/40 backdrop-blur-[1px]" onClick={onClose} />
       <div
         ref={dialogRef}
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="act-now-dialog-title"
-        className="relative flex pb-[env(safe-area-inset-bottom)] outline-none max-h-[min(85dvh,28rem)] w-full max-w-md flex-col rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) sm:rounded-2xl"
+        className="relative flex pb-[env(safe-area-inset-bottom)] outline-none max-h-[min(85dvh,28rem)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-hairline bg-surface shadow-(--shadow-popover) ring-1 ring-inset ring-ink/[0.03] sm:rounded-2xl"
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline px-5 py-4">
           <div>
-            <h2 id="act-now-dialog-title" className="text-[14px] font-semibold text-ink">
+            <h2 id="act-now-dialog-title" className="text-base font-medium text-ink">
               {title}
             </h2>
-            <p className="mt-0.5 text-[12px] text-muted">{subtitle}</p>
+            <p className="mt-0.5 text-xs text-muted">{subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-8 w-8 touch:h-11 touch:w-11 place-items-center rounded-lg text-muted hover:bg-canvas hover:text-ink"
+            className="grid h-8 w-8 touch:h-11 touch:w-11 place-items-center rounded-full border border-transparent text-muted transition-colors hover:border-hairline hover:bg-canvas hover:text-ink"
             aria-label="Close"
           >
             <X className="h-4 w-4" />
           </button>
         </header>
-        <div className="min-h-0 overflow-y-auto px-5 py-3">{children}</div>
+        <div className="rv-scroll min-h-0 overflow-y-auto px-5 py-3">{children}</div>
       </div>
     </div>
   );
@@ -305,9 +306,9 @@ function ActNowBar({
   onFreeing: () => void;
 }) {
   const alertBtn =
-    "inline-flex h-9 touch:h-11 items-center gap-2 rounded-lg border px-3 text-[12px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45";
+    "inline-flex h-8 touch:h-10 items-center gap-2 rounded-lg border px-2.5 text-xs font-medium shadow-(--shadow-card) transition-[border-color,box-shadow] disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none";
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="rv-inset-panel flex flex-wrap gap-2 py-2.5">
       <button
         type="button"
         disabled={attentionTotal === 0}
@@ -337,21 +338,8 @@ function AllocationCell({ row }: { row: DirectoryRow }) {
   if (row.utilisation === null || row.status === null) {
     return <TableEmpty title="No allocation data for this month" />;
   }
-  const percent = Math.round(row.utilisation * 100);
-  const width = Math.min(Math.max(row.utilisation, 0), 1) * 100;
-  const color = STATUS_STYLE[row.status].chart;
   return (
-    <div className="min-w-[9.5rem] max-w-[11rem]" title={`${hours(row.planned_hours)} of ${hours(row.capacity_hours)} h planned`}>
-      <div className="flex items-baseline justify-between gap-2">
-        <TableNumeric strong>{percent}%</TableNumeric>
-        <span className={`${tableBodyMeta} tabular-nums`}>
-          {hours(row.planned_hours)} / {hours(row.capacity_hours)} h
-        </span>
-      </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas ring-1 ring-inset ring-hairline" aria-hidden="true">
-        <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${width}%`, backgroundColor: color }} />
-      </div>
-    </div>
+    <HoursMetricPill consumed={hours(row.planned_hours)} capacity={hours(row.capacity_hours)} />
   );
 }
 
@@ -588,10 +576,13 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
         <FreeingListBody data={data.freeing} onOpen={openFromAlert} />
       </ActNowModal>
 
-      <section aria-labelledby="reporting-month-heading" className="rounded-xl border border-hairline bg-linear-to-b from-canvas/60 to-surface px-4 py-4 sm:px-5 sm:py-5">
+      <section
+        aria-labelledby="reporting-month-heading"
+        className="rounded-xl border border-hairline bg-surface px-4 py-4 shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03] sm:px-5 sm:py-5"
+      >
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 max-w-xl">
-            <h2 id="reporting-month-heading" className="text-[13px] font-semibold text-ink">
+            <h2 id="reporting-month-heading" className="text-base font-medium text-ink">
               Reporting month
             </h2>
             <p className="mt-1 text-[12px] leading-relaxed text-muted">
@@ -621,9 +612,9 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
           </span>
         }
       >
-        <div className="mb-5 rounded-xl border border-hairline bg-canvas/25 p-4 sm:p-5">
+        <div className="mb-4 rounded-xl border border-hairline bg-canvas/40 p-3.5 sm:p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-wide text-ink-soft uppercase">Find employees</p>
+            <p className="rv-eyebrow">Find employees</p>
             {filtering && (
               <button
                 type="button"
@@ -639,7 +630,7 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
           <div
             role="group"
             aria-label="Employee filters"
-            className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-6 @5xl:items-end"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 2xl:items-end"
           >
             <div className="min-w-0 @md:col-span-2">
               <label htmlFor="employee-directory-search" className={labelClass}>
@@ -743,7 +734,7 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
                       </button>
                       <p className="flex flex-wrap items-center gap-1.5 text-xs tabular-nums text-muted">
                         {row.code}
-                        {!row.hr_match && <FlagBadge>No HR match</FlagBadge>}
+                        {!row.hr_match && <HrMatchFlag />}
                       </p>
                     </div>
                     {row.status ? (
@@ -831,7 +822,7 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
                           </span>
                           <span className={`flex items-center gap-1.5 ${tableBodyId}`}>
                             {row.code}
-                            {!row.hr_match && <FlagBadge>No HR match</FlagBadge>}
+                            {!row.hr_match && <HrMatchFlag />}
                           </span>
                         </span>
                       </button>

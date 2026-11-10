@@ -1,10 +1,10 @@
 import { forwardRef, type ReactNode } from "react";
 
-import { Card, SectionHeader, quietButtonClass } from "../ui/primitives";
+import { Card, SectionHeader, insetPanelClass, quietButtonClass } from "../ui/primitives";
 
 /** Uniform vertical rhythm between page zones. */
 export function PageZones({ children }: { children: ReactNode }) {
-  return <div className="space-y-6">{children}</div>;
+  return <div className="min-w-0 space-y-4 md:space-y-5">{children}</div>;
 }
 
 /** Zone 2: filter controls with a consistent title and optional reset. */
@@ -43,7 +43,7 @@ export function FilterCard({
         ) : undefined
       }
     >
-      {children}
+      <div className={insetPanelClass}>{children}</div>
     </Card>
   );
 }
@@ -85,7 +85,7 @@ export const MasterDetailLandmark = forwardRef<
       ref={ref}
       tabIndex={-1}
       aria-label={label}
-      className={`scroll-mt-6 space-y-6 outline-none ${className}`}
+      className={`scroll-mt-4 space-y-4 md:space-y-5 outline-none ${className}`}
     >
       {children}
     </section>

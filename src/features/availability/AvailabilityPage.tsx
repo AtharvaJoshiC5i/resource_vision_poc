@@ -114,7 +114,7 @@ export function AvailabilityPage() {
         resetDisabled={activeFilters === 0}
       >
         <div className="@container">
-        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-4 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-6">
+        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <MultiSelect
             label="Reporting month"
             options={(options.data?.months ?? []).map((m) => ({
@@ -168,7 +168,7 @@ export function AvailabilityPage() {
           <ErrorBlock message={overview.error} onRetry={overview.reload} />
         ) : (
           <div className="@container">
-          <div className="grid grid-cols-1 gap-3 @xs:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6">
             <KpiCard
               label="Employees with records"
               value={kpis?.employees_with_records}
@@ -201,7 +201,7 @@ export function AvailabilityPage() {
           title="Trends"
           subtitle="Monthly distribution of the filtered population"
         />
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <Card title="Employees by availability status">
             {overview.error ? null : !overview.data ? (
               <LoadingBlock height={320} label="Loading availability chart" />

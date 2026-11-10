@@ -35,7 +35,7 @@ function Brand({ titleId, compact = false }: { titleId?: string; compact?: boole
     <div className="flex min-h-0 min-w-0 items-center gap-2">
       <BrandMark size={compact ? "sm" : "md"} />
       <div className={`min-w-0 leading-none ${compact ? "sr-only" : ""}`}>
-        <span id={titleId} className="block truncate text-sm font-semibold tracking-tight text-ink">
+        <span id={titleId} className="block truncate text-sm font-medium tracking-tight text-ink">
           Resource Vision
         </span>
         <span className="mt-0.5 block truncate text-xs text-muted">Workforce planning</span>
@@ -67,10 +67,10 @@ function SidebarNav({
               title={compact ? item.label : undefined}
               className={({ isActive }) =>
                 [
-                  "flex h-9 touch:h-11 items-center rounded-lg text-[13px] transition-colors",
+                  "relative flex h-9 touch:h-11 items-center rounded-lg text-[13px] transition-colors",
                   compact ? "w-10 touch:w-11 justify-center" : "w-full gap-3 px-2.5",
                   isActive
-                    ? "bg-primary-soft font-medium text-purple-indigo ring-1 ring-inset ring-primary/10"
+                    ? "bg-surface font-medium text-ink shadow-(--shadow-card) before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary"
                     : "text-ink-soft hover:bg-canvas hover:text-ink",
                 ].join(" ")
               }
@@ -202,7 +202,7 @@ function DesktopSidebar({
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) schedulePeek(false);
       }}
-      className={`fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-hairline bg-canvas transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none md:flex ${
+      className={`fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-hairline bg-canvas/95 backdrop-blur-[2px] transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none md:flex ${
         expanded ? "w-60" : "w-16"
       }`}
     >
@@ -271,7 +271,7 @@ export function AppShell() {
       <AvailabilityGuidePanel open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip bg-canvas pr-[env(safe-area-inset-right)] max-md:pl-[env(safe-area-inset-left)] md:ml-[var(--rv-sidebar-width,4rem)] md:min-h-0 md:overflow-y-auto md:overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-canvas px-4 md:hidden">
+        <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-canvas/95 px-4 backdrop-blur-[6px] md:hidden">
           <Brand />
           <button
             type="button"
@@ -291,7 +291,7 @@ export function AppShell() {
           </header>
         ) : null}
 
-        <main id="main" className="mx-auto w-full max-w-[1440px] flex-1 space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8 short:py-3">
+        <main id="main" className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6 short:py-2">
           <Outlet />
         </main>
       </div>
@@ -307,7 +307,7 @@ export function AppShell() {
           <div
             ref={drawerRef}
             tabIndex={-1}
-            className="fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col border-r border-hairline bg-surface pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-(--shadow-popover) outline-none md:hidden"
+            className="fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col border-r border-hairline bg-surface pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-(--shadow-popover) ring-1 ring-inset ring-ink/[0.03] outline-none md:hidden"
             role="dialog"
             aria-modal="true"
             aria-labelledby="mobile-nav-title"

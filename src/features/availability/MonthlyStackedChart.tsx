@@ -91,7 +91,7 @@ export function MonthlyStackedChart({ title, months, series }: Props) {
       {/* Below 640px every month keeps a readable slot and the chart scrolls sideways. */}
       <div className="overflow-x-auto overscroll-x-contain" aria-hidden="true">
       <div
-        className="h-72 min-w-(--chart-min) sm:min-w-0"
+        className="h-60 min-w-(--chart-min) sm:h-64 sm:min-w-0"
         style={{ "--chart-min": `${Math.max(320, months.length * 36 + 64)}px` } as CSSProperties}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -140,7 +140,7 @@ export function MonthlyStackedChart({ title, months, series }: Props) {
               <LabelList
                 dataKey="totalLine"
                 position="top"
-                fontSize={11}
+                fontSize={10}
                 fontWeight={500}
                 fill="var(--color-ink-soft)"
                 fontFamily={CHART_FONT}

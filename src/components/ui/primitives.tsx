@@ -1,24 +1,58 @@
 import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
 import { useScrollEdges } from "../../hooks/useScrollEdges";
 import { tableFrameClass, tableFrameNestedClass } from "./tableClasses";
-import { CircleAlert, type LucideIcon } from "lucide-react";
+import { CircleAlert, UserRoundX, type LucideIcon } from "lucide-react";
 
 import type { AvailabilityStatus } from "../../api/types";
 import { EM_DASH, integer } from "../../lib/format";
 import { STATUS_STYLE } from "../../lib/status";
 
 export const fieldClass =
-  "h-9 touch:h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm touch:text-base text-ink placeholder:text-muted transition-colors hover:border-muted/60 focus:border-primary focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-primary/15 disabled:bg-canvas disabled:text-muted";
+  "h-8 touch:h-10 w-full rounded-lg border border-hairline bg-raised px-2.5 text-sm touch:text-[1rem] text-ink shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-surface)_80%,transparent)] placeholder:text-muted transition-[border-color,box-shadow,background-color] hover:border-border focus:border-primary focus:bg-surface focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-primary/12 disabled:bg-canvas disabled:text-muted disabled:shadow-none";
 
-export const labelClass = "mb-1.5 block text-xs font-medium text-ink-soft";
+export const labelClass = "mb-1.5 block text-xs font-medium text-muted";
 
 /** Secondary button: bordered, neutral. */
 export const buttonClass =
-  "inline-flex h-8 touch:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-border bg-surface px-3 text-[12px] font-medium text-ink transition-colors hover:bg-canvas disabled:opacity-40 disabled:hover:bg-surface";
+  "inline-flex h-8 touch:h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-hairline bg-surface px-2.5 text-xs font-medium text-ink shadow-(--shadow-card) transition-[background-color,border-color,box-shadow] hover:border-border hover:bg-canvas active:shadow-none disabled:opacity-40 disabled:hover:bg-surface disabled:shadow-none";
 
 /** Tertiary button: text only, for actions that sit inside a card header. */
 export const quietButtonClass =
-  "inline-flex h-8 touch:h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[12px] font-medium text-primary transition-colors hover:bg-primary-soft hover:text-purple-indigo disabled:text-muted disabled:hover:bg-transparent";
+  "inline-flex h-8 touch:h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-primary transition-colors hover:bg-primary-soft hover:text-purple-indigo disabled:text-muted disabled:hover:bg-transparent";
+
+/** In-card subsection label — sentence case, muted. */
+export const sectionEyebrowClass = "rv-eyebrow";
+
+export const insetPanelClass = "rv-inset-panel";
+
+/** Two-state (or more) view switcher, e.g. chart vs table. */
+export function SegmentedControl<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="rv-segmented">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-pressed={value === option.value}
+          onClick={() => onChange(option.value)}
+          className="rv-segmented__option"
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function Card({
   title,
@@ -37,16 +71,18 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`rounded-xl border border-hairline bg-surface p-5 shadow-(--shadow-card) sm:p-6 short:p-4 ${className}`}>
+    <section
+      className={`rounded-xl border border-card-border bg-surface p-4 shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.05] sm:p-5 short:p-3 ${className}`}
+    >
       {(title || actions) && (
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="min-w-0">
             {title && (
-              <h2 id={titleId} className="text-[15px] font-semibold leading-6 text-ink">
+              <h2 id={titleId} className="text-base font-medium leading-snug text-ink">
                 {title}
               </h2>
             )}
-            {subtitle && <p className="mt-0.5 max-w-3xl text-[12px] leading-5 text-muted">{subtitle}</p>}
+            {subtitle && <p className="mt-0.5 max-w-3xl text-xs leading-relaxed text-muted">{subtitle}</p>}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </header>
@@ -69,12 +105,12 @@ export function SectionHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+    <div className="mb-2.5 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
       <div className="min-w-0">
-        <h2 id={id} className="text-[15px] font-semibold leading-6 text-ink">
+        <h2 id={id} className="text-base font-medium leading-snug text-ink">
           {title}
         </h2>
-        {subtitle && <p className="text-[12px] leading-5 text-muted">{subtitle}</p>}
+        {subtitle && <p className="text-xs leading-relaxed text-muted">{subtitle}</p>}
       </div>
       {actions}
     </div>
@@ -101,12 +137,12 @@ export function StatusBadge({ status }: { status: AvailabilityStatus }) {
   return (
     <span
       title={status}
-      className="inline-flex h-6 max-w-full items-center gap-1.5 overflow-hidden whitespace-nowrap rounded-md pl-1 pr-2 text-xs font-medium"
+      className="inline-flex h-[1.375rem] max-w-full items-center gap-1 overflow-hidden whitespace-nowrap rounded-md pl-0.5 pr-1.5 text-xs font-medium"
       style={{ backgroundColor: style.bg, color: style.fg }}
     >
       <span
         aria-hidden="true"
-        className="grid h-4 w-4 shrink-0 place-items-center rounded-sm bg-surface/70 text-[11px] font-semibold leading-none"
+        className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-sm bg-surface/70 text-[10px] font-semibold leading-none"
       >
         {style.letter}
       </span>
@@ -153,8 +189,9 @@ const KPI_TONE: Record<KpiTone, { bg: string; fg: string }> = {
 };
 
 /**
- * Label and icon on top, the figure, then a footer line of context.
- * The icon tile takes the status colours when `status` is set, otherwise `tone`.
+ * Summary metric. Icon and label on one line, the figure large beneath, then one line of context.
+ * The footer's leading figure sits in a small tinted chip; icon and chip take the status colours
+ * when `status` is set, otherwise `tone`. With `onClick` the card is a filter toggle.
  */
 export function KpiCard({
   label,
@@ -193,39 +230,37 @@ export function KpiCard({
 
   const content = (
     <>
-      <span className="flex items-start justify-between gap-3">
-        <span className={`min-w-0 pt-1 text-[12.5px] font-medium leading-5 ${selected ? "text-ink" : "text-ink-soft"}`}>
+      <span className="flex items-center gap-2">
+        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.75} style={{ color: colors.fg }} />
+        <span title={label} className={`min-w-0 truncate text-[13px] font-medium leading-5 ${selected ? "text-ink" : "text-ink-soft"}`}>
           {label}
-        </span>
-        <span
-          aria-hidden="true"
-          className="grid h-8 w-8 shrink-0 place-items-center rounded-lg"
-          style={{ backgroundColor: colors.bg, color: colors.fg }}
-        >
-          <Icon className="h-4 w-4" strokeWidth={2} />
         </span>
       </span>
 
       {loading ? (
-        <span className="mt-2 block" aria-hidden="true">
-          <span className="skeleton block h-8 w-24" />
-          <span className="mt-4 block border-t border-hairline pt-3">
-            <span className="skeleton block h-3 w-32" />
+        <span className="mt-3 block" aria-hidden="true">
+          <span className="skeleton block h-8 w-20" />
+          <span className="mt-3 block pt-3">
+            <span className="skeleton block h-4 w-28" />
           </span>
         </span>
       ) : (
         <>
-          <span className="mt-2 block whitespace-nowrap text-[26px] font-semibold leading-8 tracking-tight tabular-nums text-ink">
+          <span className="mt-3 flex items-baseline gap-1 whitespace-nowrap text-[28px] font-medium leading-9 tracking-tight tabular-nums text-ink">
             {display}
-            {showUnit && <span className="ml-1 text-sm font-medium tracking-normal text-muted">{unit}</span>}
+            {showUnit && <span className="text-sm font-normal tracking-normal text-muted">{unit}</span>}
           </span>
           {hasFooter && (
-            <span className="mt-auto block pt-4">
-              <span className="block truncate border-t border-hairline pt-3 text-xs tabular-nums text-muted">
-                {emphasis != null && <span className="font-semibold text-ink-soft">{emphasis}</span>}
-                {emphasis != null && caption != null && " "}
-                {caption}
-              </span>
+            <span className="mt-auto flex min-w-0 items-center gap-2 pt-3 text-xs tabular-nums text-muted">
+              {emphasis != null && (
+                <span
+                  className="shrink-0 rounded-md px-1.5 py-0.5 font-medium"
+                  style={{ backgroundColor: colors.bg, color: colors.fg }}
+                >
+                  {emphasis}
+                </span>
+              )}
+              {caption != null && <span className="min-w-0 truncate">{caption}</span>}
             </span>
           )}
         </>
@@ -233,7 +268,8 @@ export function KpiCard({
     </>
   );
 
-  const base = "flex h-full w-full min-w-0 flex-col rounded-xl border bg-surface p-4 text-left shadow-(--shadow-card)";
+  const base =
+    "flex h-full w-full min-w-0 flex-col rounded-xl border bg-surface p-4 text-left shadow-(--shadow-card) transition-[border-color,box-shadow] duration-150";
 
   if (interactive) {
     return (
@@ -241,8 +277,8 @@ export function KpiCard({
         type="button"
         onClick={onClick}
         aria-pressed={selected}
-        className={`${base} transition-colors ${
-          selected ? "border-primary ring-1 ring-inset ring-primary" : "border-hairline hover:border-border"
+        className={`${base} ${
+          selected ? "border-primary ring-1 ring-primary" : "border-kpi-border hover:border-muted/60"
         }`}
       >
         {content}
@@ -250,7 +286,7 @@ export function KpiCard({
     );
   }
 
-  return <div className={`${base} border-hairline`}>{content}</div>;
+  return <div className={`${base} border-kpi-border`}>{content}</div>;
 }
 
 export function InfoTile({ value, label }: { value: ReactNode; label: string }) {
@@ -267,7 +303,7 @@ export function MetaField({ label, value, className = "" }: { label: string; val
   return (
     <div className={`min-w-0 ${className}`}>
       <dt className="text-xs text-muted">{label}</dt>
-      <dd className="mt-0.5 break-words text-[13px] font-medium tabular-nums text-ink-soft">{value}</dd>
+      <dd className="mt-0.5 break-words text-sm font-medium tabular-nums text-ink-soft">{value}</dd>
     </div>
   );
 }
@@ -287,9 +323,7 @@ export function Pill({
   const style: CSSProperties = { backgroundColor: bg, color: fg };
   return (
     <span
-      className={`inline-flex items-center rounded-md px-2 text-xs font-medium ${
-        wrap ? "min-h-6 py-0.5 leading-4 break-words" : "h-6 whitespace-nowrap"
-      }`}
+      className={`rv-chip border-transparent shadow-none ${wrap ? "min-h-6 py-0.5 leading-4 break-words" : "h-6 whitespace-nowrap"}`}
       style={style}
     >
       {children}
@@ -297,11 +331,29 @@ export function Pill({
   );
 }
 
-/** Neutral badge for data-quality flags such as a missing HR match. */
-export function FlagBadge({ children }: { children: ReactNode }) {
+/** HR master data not linked to ZingHR — inline note, not a competing pill. */
+export function HrMatchFlag({ className = "" }: { className?: string }) {
   return (
-    <span className="inline-flex h-5 items-center whitespace-nowrap rounded-md bg-warning-soft px-1.5 text-xs font-medium text-warning-ink">
-      {children}
+    <span
+      className={`inline-flex max-w-full items-center gap-1 text-xs leading-none text-muted ${className}`}
+      title="Employee record is not matched to ZingHR"
+    >
+      <UserRoundX aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-warning-ink/80" strokeWidth={1.75} />
+      <span className="min-w-0 truncate text-[11px] text-ink-soft">No HR match</span>
+    </span>
+  );
+}
+
+/** Contextual info flag for non-HR messages (e.g. filter scope). */
+export function FlagBadge({ children }: { children: ReactNode }) {
+  const title = typeof children === "string" ? children : undefined;
+  return (
+    <span
+      className="inline-flex max-w-xs items-start gap-1.5 rounded-md bg-canvas px-2 py-1 text-xs leading-snug text-muted ring-1 ring-inset ring-hairline"
+      title={title}
+    >
+      <CircleAlert aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" strokeWidth={1.75} />
+      <span className="min-w-0">{children}</span>
     </span>
   );
 }
@@ -320,7 +372,10 @@ export function TableSkeleton({
   const width = (row: number, col: number) => (col === 0 ? 28 : 8 + ((row * 7 + col * 13) % 9));
   return (
     <div role="status" aria-live="polite" aria-label={label} className={tableFrameClass}>
-      <div aria-hidden="true" className="flex h-10 items-center gap-6 border-b border-primary/25 bg-lavender-soft px-4">
+      <div
+        aria-hidden="true"
+        className="flex h-10 items-center gap-6 border-b border-hairline bg-[var(--rv-table-header-bg)] px-4"
+      >
         {Array.from({ length: columns }, (_, col) => (
           <span key={col} className="skeleton block h-2.5" style={{ width: `${col === 0 ? 16 : 7}%` }} />
         ))}
@@ -352,7 +407,10 @@ export function LoadingBlock({ height = 160, label = "Loading data" }: { height?
 
 export function ErrorBlock({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className="flex gap-3 rounded-xl border border-error/25 bg-error-soft px-4 py-4 sm:px-5">
+    <div
+      role="alert"
+      className="flex gap-3 rounded-xl border border-error/25 bg-error-soft px-4 py-4 shadow-(--shadow-card) ring-1 ring-inset ring-error/10 sm:px-5"
+    >
       <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-error-ink" />
       <div className="min-w-0 text-sm">
         <p className="font-medium text-ink">Data could not be loaded</p>
@@ -368,7 +426,11 @@ export function ErrorBlock({ message, onRetry }: { message: string; onRetry?: ()
 }
 
 export function EmptyBlock({ message }: { message: string }) {
-  return <div className="rounded-lg bg-canvas px-6 py-10 text-center text-sm text-muted">{message}</div>;
+  return (
+    <div className="rounded-xl border border-dashed border-hairline bg-canvas/50 px-6 py-10 text-center text-sm text-muted">
+      {message}
+    </div>
+  );
 }
 
 export function PageHeader({
@@ -381,13 +443,15 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-semibold leading-8 tracking-tight text-ink">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">{subtitle}</p>}
+    <header className="border-b border-hairline pb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-medium leading-snug tracking-tight text-ink sm:text-2xl">{title}</h1>
+          {subtitle && <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted sm:text-sm">{subtitle}</p>}
+        </div>
+        {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
       </div>
-      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
-    </div>
+    </header>
   );
 }
 
@@ -410,7 +474,7 @@ export function Pagination({
   return (
     <nav
       aria-label="Pagination"
-      className="mt-4 flex flex-wrap items-center justify-between gap-3 text-[12px] text-muted tabular-nums"
+      className="rv-inset-panel mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted tabular-nums py-2.5"
     >
       <span>
         <span className="font-medium text-ink-soft">
@@ -447,10 +511,13 @@ export {
 } from "./tableClasses";
 
 export {
+  HoursMetricPill,
   TableEmpty,
   TableHourCell,
   TableNumeric,
   TableText,
+  chipClass,
+  metricPillClass,
   tableBodyId,
   tableBodyMeta,
   tableBodyNumeric,

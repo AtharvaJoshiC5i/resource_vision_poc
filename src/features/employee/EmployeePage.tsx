@@ -29,12 +29,13 @@ import {
   Card,
   EmptyBlock,
   ErrorBlock,
-  FlagBadge,
+  HrMatchFlag,
   KpiCard,
   LoadingBlock,
   PageHeader,
   Pill,
   SectionHeader,
+  SegmentedControl,
   StatusBadge,
   fieldClass,
   TableEmpty,
@@ -80,68 +81,86 @@ function StatusCell({ status }: { status: string | null }) {
   return isStatus(status) ? <StatusBadge status={status} /> : <span>{status}</span>;
 }
 
+/** Overrides default left-aligned headers so numeric columns line up with their cells. */
+const EMPLOYEE_MONTHLY_TABLE = [
+  tableClassDense,
+  "w-full table-fixed",
+  "[&_thead_th.rv-col-num]:text-right",
+  "[&_thead_th.rv-col-label]:text-left",
+  "[&_thead_th.rv-col-status]:text-left",
+  "[&_tbody_td.rv-col-num]:text-right",
+  "[&_tbody_td.rv-col-num]:tabular-nums",
+].join(" ");
+
 /* ----------------------------------------------------------------------------- availability over time */
 function MonthlyTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMonth: number | null }) {
   return (
-    <TableFrame tabIndex={0} role="region" aria-label="Monthly allocation and availability">
-      <table className={`${tableClassDense} min-w-[20rem]`}>
-          <thead>
-            <tr>
-              <th className={`${tableHeadClass} text-left`} scope="col">
-                Month
-              </th>
-              <th className={`${tableHeadClass} text-right`} scope="col" title="Planned hours">
-                Planned
-              </th>
-              <th className={`${tableHeadClass} text-right`} scope="col" title="Hours needing review">
-                Review
-              </th>
-              <th className={`${tableHeadClass} text-right`} scope="col" title="Remaining hours">
-                Free
-              </th>
-              <th className={tableHeadClass} scope="col">
-                Status
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {detail.months.map((m: EmployeeMonthRow) => (
-              <tr
-                key={m.month}
-                className={`${focusMonth === m.month ? "rv-table-row--accent" : ""} ${m.present ? "text-ink-soft" : "rv-table-row--muted"}`}
+    <TableFrame nested tabIndex={0} role="region" aria-label="Monthly allocation and availability" className="mt-0">
+      <table className={EMPLOYEE_MONTHLY_TABLE}>
+        <colgroup>
+          <col className="w-[26%]" />
+          <col className="w-[18%]" />
+          <col className="w-[17%]" />
+          <col className="w-[17%]" />
+          <col className="w-[22%]" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th className={`${tableHeadClass} rv-col-label`} scope="col">
+              Month
+            </th>
+            <th className={`${tableHeadClass} rv-col-num`} scope="col" title="Planned hours">
+              Planned
+            </th>
+            <th className={`${tableHeadClass} rv-col-num`} scope="col" title="Hours needing review">
+              Review
+            </th>
+            <th className={`${tableHeadClass} rv-col-num`} scope="col" title="Remaining hours">
+              Free
+            </th>
+            <th className={`${tableHeadClass} rv-col-status`} scope="col">
+              Status
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {detail.months.map((m: EmployeeMonthRow) => (
+            <tr
+              key={m.month}
+              className={`${focusMonth === m.month ? "rv-table-row--accent" : ""} ${m.present ? "text-ink-soft" : "rv-table-row--muted"}`}
+            >
+              <th
+                scope="row"
+                className="rv-col-label truncate text-left font-medium text-ink"
+                title={
+                  m.contract_category
+                    ? `${m.label} · ${m.project_count} projects · ${m.contract_category}`
+                    : m.label
+                }
               >
-                <th
-                  scope="row"
-                  className="max-w-[7rem] truncate text-left font-medium text-ink"
-                  title={
-                    m.contract_category
-                      ? `${m.label} · ${m.project_count} projects · ${m.contract_category}`
-                      : m.label
-                  }
-                >
-                  {compactMonth(m.month)}
-                </th>
-                <td className="text-right">
-                  <TableNumeric strong className="inline-block w-full text-right">
-                    {hours(m.planned_hours)}
-                  </TableNumeric>
-                </td>
-                <td className="text-right">
-                  <TableNumeric className="inline-block w-full text-right">{hours(m.unresolved_hours)}</TableNumeric>
-                </td>
-                <td className="text-right">
-                  <TableNumeric className="inline-block w-full text-right">{hours(m.remaining_hours)}</TableNumeric>
-                </td>
-                <td
-                  className="max-w-[8.5rem]"
-                  title={m.status_reason ?? (m.has_data ? "No record this month" : "No Project Track data for this month")}
-                >
-                  {m.present ? <StatusCell status={m.status} /> : <TableEmpty title="No record this month" />}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                {compactMonth(m.month)}
+              </th>
+              <td className="rv-col-num align-middle text-right">
+                <TableNumeric strong={m.planned_hours !== null}>{hours(m.planned_hours)}</TableNumeric>
+              </td>
+              <td className="rv-col-num align-middle text-right">
+                <TableNumeric strong={m.unresolved_hours !== null && m.unresolved_hours > 0}>
+                  {hours(m.unresolved_hours)}
+                </TableNumeric>
+              </td>
+              <td className="rv-col-num align-middle text-right">
+                <TableNumeric strong={m.remaining_hours !== null}>{hours(m.remaining_hours)}</TableNumeric>
+              </td>
+              <td
+                className="rv-col-status align-middle"
+                title={m.status_reason ?? (m.has_data ? "No record this month" : "No Project Track data for this month")}
+              >
+                {m.present ? <StatusCell status={m.status} /> : <TableEmpty title="No record this month" />}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </TableFrame>
   );
 }
@@ -199,7 +218,7 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
         {totals.map((s) => (
           <li
             key={s.key}
-            className="inline-flex min-w-0 items-center gap-2 rounded-md border border-hairline bg-canvas px-2.5 py-1.5 text-xs"
+            className="rv-chip min-w-0 bg-canvas"
           >
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm" style={{ background: s.fill }} />
             <span className="text-muted">{s.label}</span>
@@ -208,7 +227,7 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
         ))}
       </ul>
       <div
-        className="rounded-lg border border-hairline bg-canvas/30 p-2"
+        className="rounded-xl border border-hairline bg-canvas/40 p-2 ring-1 ring-inset ring-ink/[0.02]"
         style={{ height: AVAILABILITY_CHART_HEIGHT }}
         aria-hidden={data.length === 0}
       >
@@ -307,18 +326,6 @@ function AvailabilityOverTime({
 }) {
   const [view, setView] = useState<"chart" | "table">("chart");
   const monthsWithRecords = detail.months.filter((m) => m.present).length;
-  const option = (value: "chart" | "table", label: string) => (
-    <button
-      type="button"
-      aria-pressed={view === value}
-      onClick={() => setView(value)}
-      className={`h-7 touch:h-10 rounded-md px-3 text-[12px] font-medium transition-colors ${
-        view === value ? "bg-surface text-ink shadow-(--shadow-card)" : "text-muted hover:text-ink"
-      }`}
-    >
-      {label}
-    </button>
-  );
   return (
     <Card
       className={`flex min-h-0 flex-col ${className}`}
@@ -326,10 +333,15 @@ function AvailabilityOverTime({
       titleId="emp-availability-trend-heading"
       subtitle={`${monthsWithRecords} of ${detail.months.length} months with records. Blank cells are unknown, not zero.`}
       actions={
-        <div role="group" aria-label="View" className="inline-flex rounded-lg border border-hairline bg-canvas p-0.5">
-          {option("chart", "Chart")}
-          {option("table", "Table")}
-        </div>
+        <SegmentedControl
+          label="View"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "chart", label: "Chart" },
+            { value: "table", label: "Table" },
+          ]}
+        />
       }
     >
       <div className={view === "table" ? WORK_PANEL_SCROLL : "min-h-0"}>
@@ -621,7 +633,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
 }
 
 /* ----------------------------------------------------------------------------- profile header */
-const profileControlLabel = "mb-1.5 block text-xs font-medium tracking-wide text-ink-soft";
+const profileControlLabel = "mb-1.5 block text-xs font-medium text-muted";
 
 function ProfileDetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -662,19 +674,19 @@ function EmployeeProfileOverview({
   return (
     <section
       aria-labelledby="employee-profile-heading"
-      className="overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card)"
+      className="overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]"
     >
       <div className="border-b border-hairline bg-canvas/50 px-5 py-4 sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex min-w-0 items-start gap-3.5">
             <div
               aria-hidden="true"
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-surface text-sm font-semibold text-purple-indigo ring-2 ring-inset ring-primary/15"
+              className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface text-xs font-semibold text-purple-indigo ring-2 ring-inset ring-primary/15"
             >
               {profile.initials}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 id="employee-profile-heading" className="break-words text-xl font-semibold tracking-tight text-ink sm:text-[22px]">
+              <h1 id="employee-profile-heading" className="break-words text-lg font-medium tracking-tight text-ink sm:text-xl">
                 {profile.name}
               </h1>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
@@ -690,13 +702,13 @@ function EmployeeProfileOverview({
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {profile.status && (
-                  <span className="inline-flex h-6 items-center gap-1.5 rounded-md border border-hairline bg-surface px-2 text-xs font-medium text-ink-soft">
+                  <span className="rv-chip h-6 gap-1.5 text-ink-soft">
                     <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-success" />
                     {profile.status}
                   </span>
                 )}
                 {selectedStatus && <StatusBadge status={selectedStatus} />}
-                {!matched && <FlagBadge>Missing HR match</FlagBadge>}
+                {!matched && <HrMatchFlag />}
               </div>
             </div>
           </div>
@@ -743,11 +755,11 @@ function EmployeeProfileOverview({
       </div>
 
       <div className="border-b border-hairline px-5 py-4 sm:px-6">
-        <h2 className="text-[13px] font-semibold text-ink">Employee information</h2>
+        <h2 className="text-base font-medium text-ink">Employee information</h2>
         <p className="mt-0.5 text-[12px] text-muted">HR master data and contract context for the selected month</p>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Role and organisation</h3>
+            <h3 className="rv-eyebrow">Role and organisation</h3>
             <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ProfileDetailField label="Grade" value={text(profile.grade)} />
               <ProfileDetailField label="Primary capability" value={text(profile.primary_capability)} />
@@ -758,7 +770,7 @@ function EmployeeProfileOverview({
             </dl>
           </div>
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-muted">Contact and employment</h3>
+            <h3 className="rv-eyebrow">Contact and employment</h3>
             <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ProfileDetailField label="Location" value={text(profile.location)} />
               <ProfileDetailField label="Country" value={text(profile.country)} />
@@ -783,7 +795,7 @@ function EmployeeProfileOverview({
       </div>
 
       <div className="bg-canvas/30 px-5 py-4 sm:px-6">
-        <h2 id="emp-kpi-heading" className="text-[13px] font-semibold text-ink">
+        <h2 id="emp-kpi-heading" className="text-base font-medium text-ink">
           Availability for {focusLabel}
         </h2>
         <p className="mt-0.5 text-[12px] text-muted">Planned effort, review hours, and remaining capacity for this month</p>
@@ -935,7 +947,7 @@ function EmployeeDropdown({
               }}
               placeholder="Search by name or code"
               aria-label="Search employees"
-              className="h-9 w-full rounded-lg border border-transparent bg-canvas pl-9 pr-3 text-sm touch:text-base text-ink placeholder:text-muted focus:border-primary focus:bg-surface focus:outline-none"
+              className="h-8 w-full rounded-lg border border-transparent bg-canvas pl-9 pr-3 text-sm touch:text-[1rem] text-ink placeholder:text-muted focus:border-primary focus:bg-surface focus:outline-none touch:h-10"
               onKeyDown={(event) => {
                 if (event.key === "Escape") {
                   setOpen(false);
