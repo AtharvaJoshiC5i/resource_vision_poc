@@ -1,4 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
+import { useScrollEdges } from "../../hooks/useScrollEdges";
+import { tableFrameClass, tableFrameNestedClass } from "./tableClasses";
 import { CircleAlert, type LucideIcon } from "lucide-react";
 
 import type { AvailabilityStatus } from "../../api/types";
@@ -304,6 +306,41 @@ export function FlagBadge({ children }: { children: ReactNode }) {
   );
 }
 
+/** Loading state shaped like the table it stands in for: header row, then rows of cell bars. */
+export function TableSkeleton({
+  rows = 8,
+  columns = 6,
+  label = "Loading table",
+}: {
+  rows?: number;
+  columns?: number;
+  label?: string;
+}) {
+  // Deterministic widths so the placeholder does not jitter between renders.
+  const width = (row: number, col: number) => (col === 0 ? 28 : 8 + ((row * 7 + col * 13) % 9));
+  return (
+    <div role="status" aria-live="polite" aria-label={label} className={tableFrameClass}>
+      <div aria-hidden="true" className="flex h-10 items-center gap-6 border-b border-primary/25 bg-lavender-soft px-4">
+        {Array.from({ length: columns }, (_, col) => (
+          <span key={col} className="skeleton block h-2.5" style={{ width: `${col === 0 ? 16 : 7}%` }} />
+        ))}
+      </div>
+      {Array.from({ length: rows }, (_, row) => (
+        <div
+          key={row}
+          aria-hidden="true"
+          className="flex h-12 items-center gap-6 border-b border-hairline bg-surface px-4 last:border-b-0"
+        >
+          {Array.from({ length: columns }, (_, col) => (
+            <span key={col} className="skeleton block h-3" style={{ width: `${width(row, col)}%` }} />
+          ))}
+        </div>
+      ))}
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
 export function LoadingBlock({ height = 160, label = "Loading data" }: { height?: number; label?: string }) {
   return (
     <div role="status" aria-live="polite" aria-label={label}>
@@ -396,5 +433,47 @@ export function Pagination({
   );
 }
 
-export const tableHeadClass =
-  "border-b border-hairline bg-canvas px-3 py-2.5 text-left text-xs font-medium whitespace-nowrap text-muted";
+export {
+  tableClass,
+  tableClassDense,
+  tableClassInteractive,
+  tableClassMatrix,
+  tableClassProseHeader,
+  tableFrameClass,
+  tableFrameNestedClass,
+  tableHeadClass,
+  tableStickyColClass,
+  tableTotalColClass,
+} from "./tableClasses";
+
+export {
+  TableEmpty,
+  TableHourCell,
+  TableNumeric,
+  TableText,
+  tableBodyId,
+  tableBodyMeta,
+  tableBodyNumeric,
+  tableBodyNumericStrong,
+  tableBodyText,
+  tableRowActionClass,
+} from "./tableCells";
+
+export function TableFrame({
+  nested = false,
+  className = "",
+  children,
+  ...rest
+}: ComponentPropsWithoutRef<"div"> & { nested?: boolean }) {
+  const ref = useScrollEdges();
+  const frameClass = nested ? tableFrameNestedClass : tableFrameClass;
+  return (
+    <div ref={ref} className={[frameClass, className].filter(Boolean).join(" ")} {...rest}>
+      {children}
+    </div>
+  );
+}
+
+/** Trailing "open" chevron: appears on hover or keyboard focus, always visible on touch screens. */
+export const rowChevronClass =
+  "h-4 w-4 text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 touch:opacity-100";

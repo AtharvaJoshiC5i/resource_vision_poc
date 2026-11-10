@@ -19,15 +19,24 @@ import {
   EmptyBlock,
   ErrorBlock,
   KpiCard,
-  LoadingBlock,
   MetaField,
   PageHeader,
   Pill,
+  TableSkeleton,
   buttonClass,
   fieldClass,
   labelClass,
+  TableFrame,
+  TableNumeric,
+  TableText,
+  rowChevronClass,
+  tableBodyId,
+  tableClassInteractive,
   tableHeadClass,
+  tableRowActionClass,
+  tableStickyColClass,
 } from "../../components/ui/primitives";
+import { sortIconClass } from "../../components/ui/tableStyles";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { hours, integer, shortDate } from "../../lib/format";
@@ -140,9 +149,9 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
       })}
     </ul>
 
-    <div className="hidden overflow-auto rounded-lg border border-hairline md:block" tabIndex={0} role="region" aria-label="Project portfolio">
-      <table className="w-full min-w-[920px] border-collapse text-sm">
-        <thead className="sticky top-0 z-10 bg-surface">
+    <TableFrame nested className="hidden md:block" tabIndex={0} role="region" aria-label="Project portfolio">
+      <table className={`${tableClassInteractive} min-w-[920px]`}>
+        <thead>
           <tr>
             {COLUMNS.map((col, colIndex) => {
               const active = sort.key === col.key;
@@ -152,17 +161,17 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                   key={col.key}
                   scope="col"
                   aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
-                  className={`${tableHeadClass} ${col.numeric ? "text-right" : "text-left"} ${colIndex === 0 ? "sticky left-0 z-20" : ""}`}
+                  className={`${tableHeadClass} ${col.numeric ? "text-right" : "text-left"} ${colIndex === 0 ? tableStickyColClass : ""}`}
                 >
                   <button
                     type="button"
-                    className={`-mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5 hover:text-ink ${active ? "text-ink" : ""}`}
+                    className="group/sort -mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5"
                     onClick={() =>
                       setSort((prev) => ({ key: col.key, dir: prev.key === col.key && prev.dir === "asc" ? "desc" : "asc" }))
                     }
                   >
                     {col.label}
-                    <Icon aria-hidden="true" className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />
+                    <Icon aria-hidden="true" className={sortIconClass(active)} />
                   </button>
                 </th>
               );
@@ -172,7 +181,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-hairline">
+        <tbody>
           {sorted.map((row) => {
             const tone = projectStatusTone(row.status);
             return (
@@ -186,32 +195,54 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                     onOpen(row.id);
                   }
                 }}
-                className="group cursor-pointer text-ink-soft hover:bg-canvas"
+                className="group text-ink-soft"
               >
-                <td className="sticky left-0 z-[1] bg-surface px-3 py-2.5 shadow-[inset_-1px_0_0_var(--color-hairline)] group-hover:bg-canvas">
-                  <span className="font-medium text-ink group-hover:text-purple-indigo">{row.name}</span>
+                <td className={`${tableStickyColClass}`}>
+                  <span className="block truncate text-[13px] font-medium leading-5 text-ink transition-colors group-hover:text-primary">
+                    {row.name}
+                  </span>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-muted">{row.id}</td>
-                <td className="px-3 py-2.5">{row.client_bu}</td>
-                <td className="whitespace-nowrap px-3 py-2.5">{row.contract_category}</td>
-                <td className="px-3 py-2.5">
+                <td className="whitespace-nowrap">
+                  <span className={tableBodyId}>{row.id}</span>
+                </td>
+                <td>
+                  <TableText title={row.client_bu}>{row.client_bu}</TableText>
+                </td>
+                <td className="whitespace-nowrap">
+                  <TableText>{row.contract_category}</TableText>
+                </td>
+                <td>
                   <Pill bg={tone.bg} fg={tone.fg}>
                     {row.status}
                   </Pill>
                 </td>
-                <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">{shortDate(row.start)}</td>
-                <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">{shortDate(row.end)}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{row.employees}</td>
-                <td className="px-3 py-2.5 text-right font-medium tabular-nums text-ink">{hours(row.planned_hours)}</td>
-                <td className="px-2 py-2.5 text-right">
-                  <ChevronRight aria-hidden="true" className="ml-auto h-4 w-4 text-muted group-hover:text-primary" />
+                <td className="whitespace-nowrap">
+                  <TableNumeric>{shortDate(row.start)}</TableNumeric>
+                </td>
+                <td className="whitespace-nowrap">
+                  <TableNumeric>{shortDate(row.end)}</TableNumeric>
+                </td>
+                <td className="text-right">
+                  <TableNumeric strong className="inline-block w-full text-right">
+                    {row.employees}
+                  </TableNumeric>
+                </td>
+                <td className="text-right">
+                  <TableNumeric strong className="inline-block w-full text-right">
+                    {hours(row.planned_hours)}
+                  </TableNumeric>
+                </td>
+                <td className="w-12 text-right">
+                  <span className={`ml-auto ${tableRowActionClass}`}>
+                    <ChevronRight aria-hidden="true" className={rowChevronClass} />
+                  </span>
                 </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-    </div>
+    </TableFrame>
     </>
   );
 }
@@ -362,7 +393,7 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
         }
       >
         {!overview.data && !overview.error ? (
-          <LoadingBlock height={220} label="Loading projects" />
+          <TableSkeleton rows={6} columns={9} label="Loading projects" />
         ) : rows.length === 0 ? (
           <EmptyBlock message="No projects match the current filters" />
         ) : (

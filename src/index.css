@@ -13,6 +13,9 @@
 @theme static {
   --font-sans: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 
+  /* Tablet starts at 704px so portrait iPad mini (744px) gets the tablet layout, not the phone one. */
+  --breakpoint-md: 44rem;
+
   /* Readable application hierarchy with the approved Segoe UI fallback. */
   --text-xs: 0.75rem;
   --text-xs--line-height: 1rem;
@@ -76,6 +79,13 @@
   --shadow-popover:
     0 0 0 1px var(--color-hairline),
     0 12px 32px -12px color-mix(in srgb, var(--color-ink) 22%, transparent);
+
+  /* Data tables — tinted from product palette, not neutral gray alone */
+  --rv-table-header-bg: var(--color-lavender-soft);
+  --rv-table-header-rule: color-mix(in srgb, var(--color-primary) 28%, var(--color-hairline));
+  --rv-table-row-hover: var(--color-primary-soft);
+  --rv-table-lift: color-mix(in srgb, var(--color-purple-indigo) 18%, transparent);
+  --rv-table-nested-bg: color-mix(in srgb, var(--color-lavender-light) 16%, var(--color-surface));
 }
 
 @layer base {
@@ -91,7 +101,7 @@
     text-size-adjust: 100%;
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 44rem) {
     html,
     body {
       overflow: hidden;
@@ -150,4 +160,70 @@
   to {
     background-position: -200% 0;
   }
+}
+
+
+
+/* Table row states + scroll lift (chrome via tableClasses.ts + tokens above) */
+
+.rv-table thead th {
+  background: var(--rv-table-header-bg);
+  border-bottom-color: var(--rv-table-header-rule);
+}
+
+.rv-table tbody tr.rv-table-row--accent > th,
+.rv-table tbody tr.rv-table-row--accent > td {
+  background: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+}
+
+.rv-table tbody tr.rv-table-row--accent > :first-child {
+  box-shadow: inset 3px 0 0 var(--color-primary);
+}
+
+.rv-table tbody tr.rv-table-row--open > th,
+.rv-table tbody tr.rv-table-row--open > td {
+  background: color-mix(in srgb, var(--color-lavender-light) 20%, var(--color-surface));
+}
+
+.rv-table tbody tr.rv-table-row--muted {
+  color: var(--color-muted);
+}
+
+.rv-table tbody tr.rv-table-row--nested > th,
+.rv-table tbody tr.rv-table-row--nested > td {
+  background: var(--rv-table-nested-bg);
+}
+
+.rv-table thead th.rv-table-sticky-col {
+  z-index: 4;
+}
+
+[data-scrolled-y="true"] .rv-table thead th {
+  box-shadow: 0 8px 10px -10px var(--rv-table-lift);
+}
+
+[data-scrolled-x="true"] .rv-table .rv-table-sticky-col {
+  box-shadow:
+    4px 0 12px -8px var(--rv-table-lift),
+    inset -1px 0 0 var(--color-hairline);
+}
+
+/* Panels and dropdowns — thin neutral scrollbar */
+.rv-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-muted) 50%, transparent) transparent;
+}
+
+.rv-scroll::-webkit-scrollbar {
+  width: 7px;
+}
+
+.rv-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rv-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-muted) 40%, transparent);
+  border-radius: 999px;
 }

@@ -26,8 +26,16 @@ import {
   Pill,
   SectionHeader,
   fieldClass,
-  tableHeadClass,
+  TableEmpty,
+  TableHourCell,
+  TableNumeric,
+  tableBodyId,
+  tableBodyMeta,
+  tableClassMatrix,
+  tableStickyColClass,
+  tableTotalColClass,
 } from "../../components/ui/primitives";
+import { useScrollEdges } from "../../hooks/useScrollEdges";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { CHART_AXIS, CHART_AXIS_TITLE, CHART_CURSOR, CHART_FONT, CHART_GRID, CHART_TOOLTIP } from "../../lib/chart";
@@ -67,6 +75,7 @@ function PanelScrollFrame({
   /** No inset padding — avoids a left gutter beside sticky table columns. */
   flush?: boolean;
 }) {
+  const scrollRef = useScrollEdges();
   const overflow =
     axis === "x"
       ? "overflow-x-auto overflow-y-hidden"
@@ -75,11 +84,11 @@ function PanelScrollFrame({
         : "overflow-auto";
   const pad = flush ? "p-0" : "px-2 py-2";
   return (
-    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-hairline bg-canvas/25 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]`}>
-      <div className={`${overflow} ${viewportClass} ${pad} overscroll-contain [scrollbar-gutter:stable]`} tabIndex={0}>
+    <div className={`flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-hairline bg-surface`}>
+      <div ref={scrollRef} className={`${overflow} ${viewportClass} ${pad} overscroll-contain [scrollbar-gutter:stable]`} tabIndex={0}>
         {children}
       </div>
-      {hint ? <p className="border-t border-hairline/70 px-3 py-2.5 text-xs leading-snug text-muted">{hint}</p> : null}
+      {hint ? <p className="border-t border-hairline px-3 py-2.5 text-xs leading-snug text-muted">{hint}</p> : null}
     </div>
   );
 }
@@ -343,13 +352,13 @@ function EmployeeCell({ emp }: { emp: ProjectEmployee }) {
       <Link
         to={`/employee?emp=${encodeURIComponent(emp.key)}`}
         title={`Open ${emp.name} in Employee 360`}
-        className="block truncate text-[12px] font-medium leading-tight text-ink hover:text-primary hover:underline"
+        className="block truncate font-medium leading-5 text-ink hover:underline underline-offset-2"
       >
         {emp.name}
       </Link>
-      <span className="mt-0.5 block text-[11px] tabular-nums text-muted">{emp.code}</span>
+      <span className={`mt-0.5 block ${tableBodyId}`}>{emp.code}</span>
       {meta ? (
-        <p className="mt-1 truncate text-[11px] leading-snug text-ink-soft" title={meta}>
+        <p className={`mt-0.5 truncate ${tableBodyMeta}`} title={meta}>
           {meta}
         </p>
       ) : null}
@@ -415,68 +424,50 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
   return (
     <>
     <EmployeeAllocationList detail={detail} />
-    <table
-      className="hidden w-max min-w-full border-collapse text-xs md:table"
-      role="grid"
-      aria-label="Employee allocation by month"
-    >
-      <thead className="sticky top-0 z-10 bg-surface shadow-[0_1px_0_var(--color-hairline)]">
+    {/* The surrounding PanelScrollFrame is the scroll area and frame, so the table carries no border of its own. */}
+    <table className={`${tableClassMatrix} hidden w-max min-w-full md:table`} aria-label="Employee allocation by month">
+      <thead>
         <tr>
-          <th
-            scope="col"
-            className={`${tableHeadClass} sticky left-0 z-30 w-[13.5rem] min-w-[13.5rem] border-r border-r-hairline bg-surface py-2 pl-2.5 text-left text-[11px] shadow-[4px_0_8px_-2px_rgba(15,23,42,0.12)]`}
-          >
+          <th scope="col" className={`${tableStickyColClass} w-[13.5rem] min-w-[13.5rem]`}>
             Employee
           </th>
           {detail.months.map((m) => (
-            <th
-              key={m.key}
-              scope="col"
-              title={m.label}
-              className={`${tableHeadClass} min-w-[4.25rem] whitespace-nowrap px-1.5 py-2 text-right text-[11px] font-medium`}
-            >
+            <th key={m.key} scope="col" title={m.label} className="min-w-[4.25rem] text-right">
               {compactMonth(m.key)}
             </th>
           ))}
-          <th
-            scope="col"
-            className={`${tableHeadClass} min-w-[4.25rem] border-l border-l-hairline bg-surface px-1.5 py-2 text-right text-[11px] font-semibold text-ink-soft`}
-          >
+          <th scope="col" className={`${tableTotalColClass} min-w-[4.75rem] text-right`}>
             Total
           </th>
         </tr>
       </thead>
       <tbody>
-        {detail.employees.map((emp, index) => (
-          <tr key={emp.key} className={`group ${index % 2 === 1 ? "bg-canvas/20" : ""}`}>
-            <th
-              scope="row"
-              className={`sticky left-0 z-20 w-[13.5rem] min-w-[13.5rem] border-b border-r border-hairline px-2.5 py-2.5 text-left align-middle font-normal shadow-[4px_0_8px_-2px_rgba(15,23,42,0.08)] group-last:border-b-0 group-hover:bg-canvas ${
-                index % 2 === 1 ? "bg-canvas" : "bg-surface"
-              }`}
-            >
+        {detail.employees.map((emp) => (
+          <tr key={emp.key}>
+            <th scope="row" className={`${tableStickyColClass} w-[13.5rem] min-w-[13.5rem]`}>
               <EmployeeCell emp={emp} />
             </th>
             {emp.cells.map((cell) => (
-              <td
-                key={cell.month}
-                className="border-b border-hairline px-1.5 py-2.5 text-right align-middle text-xs tabular-nums text-ink-soft group-last:border-b-0 group-hover:bg-canvas/60"
-              >
+              <td key={cell.month} className="text-right">
                 {cell.state === "hours" ? (
-                  hours(cell.hours)
+                  <TableHourCell>{hours(cell.hours)}</TableHourCell>
                 ) : cell.state === "dash" ? (
-                  <span className="text-muted" title="Employee assigned, hours not recorded">
-                    {EM_DASH}
-                  </span>
+                  <TableHourCell muted title="Employee assigned, hours not recorded">
+                    <TableEmpty title="Hours not recorded" />
+                  </TableHourCell>
                 ) : (
-                  <span className="text-hairline" aria-hidden="true">
-                    ·
-                  </span>
+                  <TableHourCell muted>
+                    <span className="text-hairline" aria-hidden="true">
+                      ·
+                    </span>
+                  </TableHourCell>
                 )}
               </td>
             ))}
-            <td className="border-b border-l border-hairline bg-surface/80 px-1.5 py-2.5 text-right align-middle text-xs font-medium tabular-nums text-ink group-last:border-b-0 group-hover:bg-canvas/60">
-              {hours(emp.total)}
+            <td className={`${tableTotalColClass} text-right`}>
+              <TableNumeric strong className="inline-flex justify-end">
+                {hours(emp.total)}
+              </TableNumeric>
             </td>
           </tr>
         ))}
@@ -789,9 +780,6 @@ function ProjectWorkPanel({ detail }: { detail: ProjectDetail }) {
           title="Team allocation"
           titleId="project-team-heading"
           subtitle={`${employeeCount} ${employeeCount === 1 ? "employee" : "employees"} · ${monthCount} reporting ${monthCount === 1 ? "month" : "months"}. Hover a month header for the full label.`}
-          actions={
-            <span className="hidden text-xs text-muted sm:inline">Sticky employee column</span>
-          }
         >
           <PanelScrollFrame
             axis="both"
@@ -799,8 +787,8 @@ function ProjectWorkPanel({ detail }: { detail: ProjectDetail }) {
             viewportClass={PROJECT_TEAM_VIEWPORT}
             hint={
               monthCount > 6
-                ? `Showing ${monthCount} months — scroll horizontally for earlier or later months. · means no record; ${EM_DASH} is unverified hours.`
-                : `· means no record; ${EM_DASH} means hours are assigned but not verified.`
+                ? `Scroll sideways for all ${monthCount} months. · means no record, ${EM_DASH} means hours are assigned but not verified.`
+                : `· means no record, ${EM_DASH} means hours are assigned but not verified.`
             }
           >
             <EmployeeAllocation detail={detail} />

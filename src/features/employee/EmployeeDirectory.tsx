@@ -30,9 +30,20 @@ import {
   fieldClass,
   labelClass,
   quietButtonClass,
+  TableEmpty,
+  TableFrame,
+  TableNumeric,
+  TableText,
+  rowChevronClass,
+  tableBodyId,
+  tableBodyMeta,
+  tableClassInteractive,
   tableHeadClass,
+  tableRowActionClass,
+  tableStickyColClass,
   type KpiTone,
 } from "../../components/ui/primitives";
+import { sortIconClass } from "../../components/ui/tableStyles";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { EM_DASH, hours, integer, text } from "../../lib/format";
@@ -102,7 +113,7 @@ function Avatar({ name }: { name: string }) {
   return (
     <span
       aria-hidden="true"
-      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-canvas text-xs font-medium text-ink-soft ring-1 ring-inset ring-hairline"
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-lavender-soft/70 text-xs font-semibold text-purple-indigo ring-1 ring-inset ring-primary/10"
     >
       {initialsOf(name)}
     </span>
@@ -323,20 +334,22 @@ function ActNowBar({
 
 /* ----------------------------------------------------------------------------- directory table */
 function AllocationCell({ row }: { row: DirectoryRow }) {
-  if (row.utilisation === null || row.status === null) return <span className="text-muted">{EM_DASH}</span>;
+  if (row.utilisation === null || row.status === null) {
+    return <TableEmpty title="No allocation data for this month" />;
+  }
   const percent = Math.round(row.utilisation * 100);
   const width = Math.min(Math.max(row.utilisation, 0), 1) * 100;
   const color = STATUS_STYLE[row.status].chart;
   return (
-    <div className="min-w-40" title={`${hours(row.planned_hours)} of ${hours(row.capacity_hours)} h planned`}>
-      <div className="flex items-baseline justify-between gap-3 text-xs">
-        <span className="font-medium tabular-nums text-ink">{percent}%</span>
-        <span className="tabular-nums text-muted">
+    <div className="min-w-[9.5rem] max-w-[11rem]" title={`${hours(row.planned_hours)} of ${hours(row.capacity_hours)} h planned`}>
+      <div className="flex items-baseline justify-between gap-2">
+        <TableNumeric strong>{percent}%</TableNumeric>
+        <span className={`${tableBodyMeta} tabular-nums`}>
           {hours(row.planned_hours)} / {hours(row.capacity_hours)} h
         </span>
       </div>
-      <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-hairline" aria-hidden="true">
-        <div className="h-full rounded-full" style={{ width: `${width}%`, backgroundColor: color }} />
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-canvas ring-1 ring-inset ring-hairline" aria-hidden="true">
+        <div className="h-full rounded-full transition-[width] duration-300 ease-out" style={{ width: `${width}%`, backgroundColor: color }} />
       </div>
     </div>
   );
@@ -344,19 +357,15 @@ function AllocationCell({ row }: { row: DirectoryRow }) {
 
 function AvailableFromCell({ row, currentMonth }: { row: DirectoryRow; currentMonth: number }) {
   if (row.status === null || row.available_from === null) {
-    return (
-      <span className="text-muted" title="No free capacity found in the reporting window">
-        {EM_DASH}
-      </span>
-    );
+    return <TableEmpty title="No free capacity found in the reporting window" />;
   }
   const now = row.available_from.month === currentMonth;
   return (
-    <span className="block whitespace-nowrap leading-5">
-      <span className={`block font-medium ${now ? "text-success-ink" : "text-ink"}`}>
+    <span className="block min-w-[5.5rem] whitespace-nowrap">
+      <span className={`block text-[13px] font-medium leading-5 ${now ? "text-success-ink" : "text-ink"}`}>
         {now ? "Now" : row.available_from.label}
       </span>
-      <span className="block text-xs tabular-nums text-muted">{hours(row.available_from.remaining_hours)} h free</span>
+      <span className={`block ${tableBodyMeta} tabular-nums`}>{hours(row.available_from.remaining_hours)} h free</span>
     </span>
   );
 }
@@ -388,10 +397,10 @@ function SortHeader({
       <button
         type="button"
         onClick={() => onSort(sortKey)}
-        className={`-mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5 hover:text-ink ${active ? "text-ink" : ""}`}
+        className="group/sort -mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5"
       >
         {label}
-        <Icon aria-hidden="true" className={`h-3.5 w-3.5 ${active ? "text-primary" : ""}`} />
+        <Icon aria-hidden="true" className={sortIconClass(active)} />
       </button>
     </th>
   );
@@ -758,8 +767,14 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
             ))}
           </ul>
 
-          <div className="hidden overflow-x-auto rounded-lg border border-hairline md:block" tabIndex={0} role="region" aria-label="Employee directory">
-            <table className="w-full min-w-[1000px] border-collapse text-sm">
+          <TableFrame
+            nested
+            className="hidden md:block"
+            tabIndex={0}
+            role="region"
+            aria-label="Employee directory"
+          >
+            <table className={`${tableClassInteractive} min-w-[1000px]`}>
               <thead>
                 <tr>
                   <SortHeader
@@ -767,7 +782,7 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
                     sortKey="name"
                     active={sort === "name"}
                     descending={descending}
-                    className="sticky left-0 z-10"
+                    className={tableStickyColClass}
                     onSort={onSort}
                   />
                   <th scope="col" className={tableHeadClass}>
@@ -797,13 +812,10 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-hairline">
+              <tbody>
                 {visible.map((row) => (
-                  <tr key={row.key} className="group cursor-pointer text-ink-soft hover:bg-canvas" onClick={() => onOpen(row.key)}>
-                    <th
-                      scope="row"
-                      className="sticky left-0 z-[1] bg-surface px-3 py-2.5 text-left font-normal shadow-[inset_-1px_0_0_var(--color-hairline)] group-hover:bg-canvas"
-                    >
+                  <tr key={row.key} className="group text-ink-soft" onClick={() => onOpen(row.key)}>
+                    <th scope="row" className={`${tableStickyColClass} text-left font-normal`}>
                       <button
                         type="button"
                         onClick={(event) => {
@@ -814,45 +826,57 @@ export function EmployeeDirectory({ onOpen }: { onOpen: (key: string) => void })
                       >
                         <Avatar name={row.name} />
                         <span className="min-w-0">
-                          <span className="block truncate font-medium text-ink group-hover:text-primary" title={row.name}>
+                          <span className="block truncate font-medium text-ink transition-colors group-hover:text-primary" title={row.name}>
                             {row.name}
                           </span>
-                          <span className="flex items-center gap-1.5 text-xs tabular-nums text-muted">
+                          <span className={`flex items-center gap-1.5 ${tableBodyId}`}>
                             {row.code}
                             {!row.hr_match && <FlagBadge>No HR match</FlagBadge>}
                           </span>
                         </span>
                       </button>
                     </th>
-                    <td className="whitespace-nowrap px-3 py-2.5 align-middle">{text(row.grade)}</td>
-                    <td className="px-3 py-2.5 align-middle">{text(row.capability)}</td>
-                    <td className="whitespace-nowrap px-3 py-2.5 align-middle">{text(row.location)}</td>
-                    <td className="px-3 py-2.5 align-middle">
+                    <td className="whitespace-nowrap">
+                      <TableText>{text(row.grade)}</TableText>
+                    </td>
+                    <td>
+                      <TableText title={text(row.capability)}>{text(row.capability)}</TableText>
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <TableText>{text(row.location)}</TableText>
+                    </td>
+                    <td>
                       {row.status ? (
                         <StatusBadge status={row.status as AvailabilityStatus} />
                       ) : (
-                        <span className="text-muted" title={`No Project Track record in ${data.month_label}`}>
-                          {EM_DASH}
-                        </span>
+                        <TableEmpty title={`No Project Track record in ${data.month_label}`} />
                       )}
                     </td>
-                    <td className="px-3 py-2.5 align-middle">
+                    <td>
                       <AllocationCell row={row} />
                     </td>
-                    <td className="px-3 py-2.5 text-right align-middle tabular-nums">
-                      {row.projects === null ? EM_DASH : row.projects}
+                    <td className="text-right">
+                      {row.projects === null ? (
+                        <TableEmpty title="Project count unavailable" />
+                      ) : (
+                        <TableNumeric strong className="inline-block text-right">
+                          {row.projects}
+                        </TableNumeric>
+                      )}
                     </td>
-                    <td className="px-3 py-2.5 align-middle">
+                    <td>
                       <AvailableFromCell row={row} currentMonth={data.month} />
                     </td>
-                    <td className="px-3 py-2.5 align-middle">
-                      <ChevronRight aria-hidden="true" className="h-4 w-4 text-border group-hover:text-primary" />
+                    <td className="w-12 text-right">
+                      <span className={`ml-auto ${tableRowActionClass}`}>
+                        <ChevronRight aria-hidden="true" className={rowChevronClass} />
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
+          </TableFrame>
           </>
         )}
 

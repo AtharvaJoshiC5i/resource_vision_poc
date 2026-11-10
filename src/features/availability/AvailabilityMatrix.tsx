@@ -9,7 +9,9 @@ import {
   buttonClass,
   fieldClass,
   labelClass,
-  tableHeadClass,
+  TableFrame,
+  tableClassMatrix,
+  tableStickyColClass,
 } from "../../components/ui/primitives";
 import { EM_DASH, hours } from "../../lib/format";
 import { STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
@@ -38,13 +40,13 @@ function CellView({ cell, monthLabel }: { cell: MatrixCell; monthLabel: string }
     STATUSES_WITH_REMAINING_HOURS.includes(cell.status) && cell.remaining_hours !== null;
   return (
     <span
-      className="inline-flex h-7 w-14 items-center justify-center gap-1 rounded-md text-xs font-semibold tabular-nums"
+      className="inline-flex h-7 min-w-14 items-center justify-center gap-1 rounded-md px-1 text-xs font-medium tabular-nums ring-1 ring-inset ring-ink/5"
       style={{ backgroundColor: style.bg, color: style.fg }}
       title={`${cell.status}: ${detail}`}
       aria-label={`${monthLabel}: ${cell.status}, ${detail}`}
     >
       <span aria-hidden={showRemaining ? undefined : true}>{style.letter}</span>
-      {showRemaining ? <span className="text-xs font-medium">{hours(cell.remaining_hours)}</span> : null}
+      {showRemaining ? <span className="text-xs">{hours(cell.remaining_hours)}</span> : null}
     </span>
   );
 }
@@ -100,7 +102,7 @@ function MatrixMonthList({ matrix, month }: { matrix: AvailabilityMatrix; month:
           <span className="min-w-0 flex-1">
             <Link
               to={`/employee?emp=${encodeURIComponent(row.key)}`}
-              className="block break-words font-medium leading-5 text-ink hover:text-primary hover:underline"
+              className="block break-words font-medium leading-5 text-ink hover:underline underline-offset-2"
             >
               {row.name}
             </Link>
@@ -174,23 +176,24 @@ export function AvailabilityMatrixView({ matrix }: { matrix: AvailabilityMatrix 
 
 export function AvailabilityMatrixTable({ matrix }: { matrix: AvailabilityMatrix }) {
   return (
-    <div
-      className="max-h-[min(560px,70dvh)] overflow-auto overscroll-contain rounded-lg border border-hairline"
+    <TableFrame
+      className="max-h-[min(560px,70dvh)]"
       tabIndex={0}
       role="region"
       aria-label="Employee allocation matrix"
     >
-      <table className="w-full border-separate border-spacing-0 text-sm">
+      <table className={`${tableClassMatrix} min-w-full`}>
         <thead>
           <tr>
-            <th
-              scope="col"
-              className={`${tableHeadClass} sticky left-0 top-0 z-20 border-r border-r-hairline`}
-            >
+            <th scope="col" className={tableStickyColClass}>
               Employee
             </th>
             {matrix.months.map((month) => (
-              <th key={month.key} scope="col" className={`${tableHeadClass} sticky top-0 z-10 min-w-[4.5rem] text-center`}>
+              <th
+                key={month.key}
+                scope="col"
+                className="min-w-[4.5rem]"
+              >
                 {month.label}
               </th>
             ))}
@@ -201,13 +204,13 @@ export function AvailabilityMatrixTable({ matrix }: { matrix: AvailabilityMatrix
             <tr key={row.key} className="group">
               <th
                 scope="row"
-                className="sticky left-0 z-10 border-b border-r border-hairline bg-surface px-3 py-2 text-left font-normal group-hover:bg-canvas group-last:border-b-0"
+                className={tableStickyColClass}
               >
                 <span className="block w-36 min-w-0 lg:w-52">
                   <Link
                     to={`/employee?emp=${encodeURIComponent(row.key)}`}
                     title={`Open ${row.name} in Employee 360`}
-                    className="block truncate font-medium leading-5 text-ink hover:text-primary hover:underline"
+                    className="block truncate font-medium leading-5 text-ink hover:underline underline-offset-2"
                   >
                     {row.name}
                   </Link>
@@ -218,10 +221,7 @@ export function AvailabilityMatrixTable({ matrix }: { matrix: AvailabilityMatrix
                 </span>
               </th>
               {row.cells.map((cell, index) => (
-                <td
-                  key={cell.month}
-                  className="border-b border-hairline px-1.5 py-1.5 text-center group-hover:bg-canvas group-last:border-b-0"
-                >
+                <td key={cell.month}>
                   <CellView cell={cell} monthLabel={matrix.months[index].label} />
                 </td>
               ))}
@@ -229,6 +229,6 @@ export function AvailabilityMatrixTable({ matrix }: { matrix: AvailabilityMatrix
           ))}
         </tbody>
       </table>
-    </div>
+    </TableFrame>
   );
 }

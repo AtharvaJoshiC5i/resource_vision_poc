@@ -37,6 +37,11 @@ import {
   SectionHeader,
   StatusBadge,
   fieldClass,
+  TableEmpty,
+  TableFrame,
+  TableNumeric,
+  tableClassDense,
+  tableClassProseHeader,
   tableHeadClass,
 } from "../../components/ui/primitives";
 import { useApi } from "../../hooks/useApi";
@@ -77,47 +82,37 @@ function StatusCell({ status }: { status: string | null }) {
 
 /* ----------------------------------------------------------------------------- availability over time */
 function MonthlyTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMonth: number | null }) {
-  const th = `${tableHeadClass} whitespace-nowrap bg-canvas`;
-  const td = "px-2.5 py-1.5 align-middle";
   return (
-    <div
-      className="overflow-hidden rounded-lg border border-hairline bg-canvas/40"
-    >
-      <div
-        className="overflow-x-auto"
-        tabIndex={0}
-        role="region"
-        aria-label="Monthly allocation and availability"
-      >
-        <table className="w-full min-w-[20rem] border-collapse text-xs">
-          <thead className="sticky top-0 z-10 bg-canvas shadow-[0_1px_0_var(--color-hairline)]">
+    <TableFrame tabIndex={0} role="region" aria-label="Monthly allocation and availability">
+      <table className={`${tableClassDense} min-w-[20rem]`}>
+          <thead>
             <tr>
-              <th className={`${th} text-left`} scope="col">
+              <th className={`${tableHeadClass} text-left`} scope="col">
                 Month
               </th>
-              <th className={`${th} text-right`} scope="col" title="Planned hours">
+              <th className={`${tableHeadClass} text-right`} scope="col" title="Planned hours">
                 Planned
               </th>
-              <th className={`${th} text-right`} scope="col" title="Hours needing review">
+              <th className={`${tableHeadClass} text-right`} scope="col" title="Hours needing review">
                 Review
               </th>
-              <th className={`${th} text-right`} scope="col" title="Remaining hours">
+              <th className={`${tableHeadClass} text-right`} scope="col" title="Remaining hours">
                 Free
               </th>
-              <th className={th} scope="col">
+              <th className={tableHeadClass} scope="col">
                 Status
               </th>
             </tr>
           </thead>
           <tbody>
-            {detail.months.map((m: EmployeeMonthRow, i) => (
+            {detail.months.map((m: EmployeeMonthRow) => (
               <tr
                 key={m.month}
-                className={`border-t border-hairline ${focusMonth === m.month ? "bg-primary-soft/40" : i % 2 === 0 ? "bg-surface" : "bg-surface/80"} ${m.present ? "text-ink-soft" : "text-muted"}`}
+                className={`${focusMonth === m.month ? "rv-table-row--accent" : ""} ${m.present ? "text-ink-soft" : "rv-table-row--muted"}`}
               >
                 <th
                   scope="row"
-                  className={`${td} max-w-[7rem] truncate text-left font-medium text-ink`}
+                  className="max-w-[7rem] truncate text-left font-medium text-ink"
                   title={
                     m.contract_category
                       ? `${m.label} · ${m.project_count} projects · ${m.contract_category}`
@@ -126,21 +121,28 @@ function MonthlyTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMon
                 >
                   {compactMonth(m.month)}
                 </th>
-                <td className={`${td} text-right font-medium tabular-nums text-ink`}>{hours(m.planned_hours)}</td>
-                <td className={`${td} text-right tabular-nums`}>{hours(m.unresolved_hours)}</td>
-                <td className={`${td} text-right tabular-nums`}>{hours(m.remaining_hours)}</td>
+                <td className="text-right">
+                  <TableNumeric strong className="inline-block w-full text-right">
+                    {hours(m.planned_hours)}
+                  </TableNumeric>
+                </td>
+                <td className="text-right">
+                  <TableNumeric className="inline-block w-full text-right">{hours(m.unresolved_hours)}</TableNumeric>
+                </td>
+                <td className="text-right">
+                  <TableNumeric className="inline-block w-full text-right">{hours(m.remaining_hours)}</TableNumeric>
+                </td>
                 <td
-                  className={`${td} max-w-[8.5rem]`}
+                  className="max-w-[8.5rem]"
                   title={m.status_reason ?? (m.has_data ? "No record this month" : "No Project Track data for this month")}
                 >
-                  {m.present ? <StatusCell status={m.status} /> : EM_DASH}
+                  {m.present ? <StatusCell status={m.status} /> : <TableEmpty title="No record this month" />}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
+    </TableFrame>
   );
 }
 
@@ -404,11 +406,13 @@ function EffortHours({
   emphasize?: boolean;
 }) {
   const needsReview = unresolved !== null && unresolved > 0;
-  if (planned === null && !needsReview) return <span className="text-muted">{EM_DASH}</span>;
+  if (planned === null && !needsReview) return <TableEmpty title="No hours recorded" />;
   return (
     <span className="inline-block text-right">
-      {planned !== null && <span className={emphasize ? "font-medium text-ink" : "text-ink-soft"}>{hours(planned)}</span>}
-      {needsReview && <span className="mt-0.5 block text-xs text-warning-ink">{hours(unresolved)} to review</span>}
+      {planned !== null && <TableNumeric strong={emphasize}>{hours(planned)}</TableNumeric>}
+      {needsReview && (
+        <span className="mt-0.5 block text-xs font-medium tabular-nums text-warning-ink">{hours(unresolved)} to review</span>
+      )}
     </span>
   );
 }
@@ -501,23 +505,21 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
     return <EmptyBlock message={`No project allocations recorded for ${label}`} />;
   }
 
-  const head = `${tableHeadClass} align-bottom whitespace-normal leading-snug`;
-  const cell = "px-3 py-2.5 align-top";
   return (
-    <div className="min-w-0 overflow-x-auto rounded-lg border border-hairline" role="region" aria-label="Projects for this employee">
-      <table className="w-full min-w-[28rem] border-collapse text-[12px]">
-        <thead className="bg-canvas">
-          <tr className="border-b border-hairline">
-            <th className={`${head} min-w-[11rem] text-left`} scope="col">
+    <TableFrame nested className="min-w-0" role="region" aria-label="Projects for this employee">
+      <table className={`${tableClassProseHeader} min-w-[28rem]`}>
+        <thead>
+          <tr>
+            <th className={`${tableHeadClass} min-w-[11rem] text-left`} scope="col">
               Project
             </th>
-            <th className={`${head} min-w-[6.5rem] text-left`} scope="col">
+            <th className={`${tableHeadClass} min-w-[6.5rem] text-left`} scope="col">
               Status
             </th>
-            <th className={`${head} min-w-[7rem] text-left`} scope="col">
+            <th className={`${tableHeadClass} min-w-[7rem] text-left`} scope="col">
               Active months
             </th>
-            <th className={`${head} w-[6.5rem] text-right`} scope="col">
+            <th className={`${tableHeadClass} w-[6.5rem] text-right`} scope="col">
               Planned hours
             </th>
           </tr>
@@ -529,8 +531,8 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
             const range = activeRange(p);
             return (
               <Fragment key={p.id}>
-                <tr className={`border-b border-hairline text-ink-soft ${expanded ? "bg-canvas/60" : "hover:bg-canvas/60"}`}>
-                  <th scope="row" className={`${cell} min-w-[11rem] text-left font-normal`}>
+                <tr className={`text-ink-soft ${expanded ? "rv-table-row--open" : ""}`}>
+                  <th scope="row" className="min-w-[11rem] align-top text-left font-normal">
                     <div className="flex items-start gap-1.5">
                       <button
                         type="button"
@@ -545,7 +547,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
                         <Link
                           to={projectHref(p.id)}
                           title={`Open ${p.name} in Projects`}
-                          className="break-words font-medium leading-5 text-ink hover:text-primary hover:underline"
+                          className="break-words font-medium leading-5 text-ink hover:underline underline-offset-2"
                         >
                           {p.name}
                         </Link>
@@ -561,7 +563,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
                       </span>
                     </div>
                   </th>
-                  <td className={`${cell} min-w-[6.5rem]`}>
+                  <td className="min-w-[6.5rem] align-top">
                     <Pill bg={tone.bg} fg={tone.fg} wrap>
                       {p.status}
                     </Pill>
@@ -569,20 +571,20 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
                       <span className="mt-1 block break-words text-xs leading-snug text-muted">{p.contract}</span>
                     ) : null}
                   </td>
-                  <td className={`${cell} min-w-[7rem] tabular-nums`}>
+                  <td className="min-w-[7rem] align-top tabular-nums">
                     <span className="block break-words leading-snug text-ink-soft">{range.span}</span>
                     <span className="mt-0.5 block text-xs text-muted">{range.count}</span>
                   </td>
-                  <td className={`${cell} w-[6.5rem] text-right align-top tabular-nums`}>
+                  <td className="w-[6.5rem] align-top text-right tabular-nums">
                     <EffortHours planned={p.planned} unresolved={p.unresolved} />
                   </td>
                 </tr>
                 {expanded &&
                   p.months.map((m) => (
                     <Fragment key={`${p.id}-${m.month}`}>
-                      <tr className="border-b border-hairline bg-surface/80">
+                      <tr className="rv-table-row--nested">
                         <td colSpan={3} className="py-2 pl-8 pr-3">
-                          <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-l-2 border-hairline pl-3">
+                          <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-l border-border pl-3">
                             <span className="shrink-0 font-medium text-ink">{m.label}</span>
                             {m.children.length === 1 && (
                               <span className="break-words text-xs text-muted">{m.children[0].sub_project}</span>
@@ -598,7 +600,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
                       </tr>
                       {m.children.length > 1 &&
                         m.children.map((child) => (
-                          <tr key={`${p.id}-${m.month}-${child.sub_project}`} className="border-b border-hairline">
+                          <tr key={`${p.id}-${m.month}-${child.sub_project}`} className="rv-table-row--nested">
                             <td colSpan={3} className="py-1.5 pl-14 pr-3">
                               <span className="block break-words text-ink-soft">{child.sub_project}</span>
                             </td>
@@ -614,7 +616,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
           })}
         </tbody>
       </table>
-    </div>
+    </TableFrame>
   );
 }
 

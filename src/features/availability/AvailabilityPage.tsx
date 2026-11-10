@@ -14,6 +14,7 @@ import {
   PageHeader,
   Pagination,
   SectionHeader,
+  TableSkeleton,
 } from "../../components/ui/primitives";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
@@ -237,7 +238,7 @@ export function AvailabilityPage() {
         {matrix.error ? (
           <ErrorBlock message={matrix.error} onRetry={matrix.reload} />
         ) : !matrix.data ? (
-          <LoadingBlock height={320} label="Loading employee matrix" />
+          <TableSkeleton rows={8} columns={10} label="Loading employee matrix" />
         ) : matrix.data.rows.length === 0 ? (
           <EmptyBlock message="No employees match the current filters" />
         ) : (
