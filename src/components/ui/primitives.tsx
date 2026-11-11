@@ -179,19 +179,9 @@ export function Sparkbars({ values, color }: { values: (number | null)[]; color:
 
 export type KpiTone = "primary" | "success" | "warning" | "error" | "lavender" | "neutral";
 
-const KPI_TONE: Record<KpiTone, { bg: string; fg: string }> = {
-  primary: { bg: "var(--color-primary-soft)", fg: "var(--color-primary)" },
-  success: { bg: "var(--color-success-soft)", fg: "var(--color-success-ink)" },
-  warning: { bg: "var(--color-warning-soft)", fg: "var(--color-warning-ink)" },
-  error: { bg: "var(--color-error-soft)", fg: "var(--color-error-ink)" },
-  lavender: { bg: "var(--color-lavender-soft)", fg: "var(--color-purple-indigo)" },
-  neutral: { bg: "var(--color-canvas)", fg: "var(--color-ink-soft)" },
-};
-
 /**
- * Summary metric. Icon and label on one line, the figure large beneath, then one line of context.
- * The footer's leading figure sits in a small tinted chip; icon and chip take the status colours
- * when `status` is set, otherwise `tone`. With `onClick` the card is a filter toggle.
+ * Summary count in the same chrome as other inset panels. Icons are muted wayfinding only.
+ * `status` / `tone` are accepted for call-site consistency but do not recolour the tile.
  */
 export function KpiCard({
   label,
@@ -208,68 +198,60 @@ export function KpiCard({
 }: {
   label: string;
   value: number | string | null | undefined;
-  /** Set smaller beside the figure, e.g. "h". */
   unit?: string;
   icon: LucideIcon;
   tone?: KpiTone;
   status?: AvailabilityStatus;
-  /** Short figure at the start of the footer, e.g. "34%". */
   emphasis?: string;
-  /** Rest of the footer line, e.g. "of employees". */
   caption?: ReactNode;
   loading?: boolean;
-  /** With onClick the card is a filter toggle. */
   selected?: boolean;
   onClick?: () => void;
 }) {
+  void tone;
+  void status;
   const interactive = Boolean(onClick);
   const display = typeof value === "number" ? integer(value) : (value ?? EM_DASH);
   const showUnit = Boolean(unit) && display !== EM_DASH;
-  const colors = status ? { bg: STATUS_STYLE[status].bg, fg: STATUS_STYLE[status].fg } : KPI_TONE[tone];
   const hasFooter = emphasis != null || caption != null;
+
+  const shellClass = ["rv-kpi-card", hasFooter ? "rv-kpi-card--with-footer" : "", selected ? "rv-kpi-card--selected" : ""]
+    .filter(Boolean)
+    .join(" ");
 
   const content = (
     <>
-      <span className="flex items-center gap-2">
-        <Icon aria-hidden="true" className="h-4 w-4 shrink-0" strokeWidth={1.75} style={{ color: colors.fg }} />
-        <span title={label} className={`min-w-0 truncate text-[13px] font-medium leading-5 ${selected ? "text-ink" : "text-ink-soft"}`}>
-          {label}
-        </span>
+      <span title={label} className={`rv-kpi-card__label ${selected ? "text-ink-soft" : ""}`}>
+        <Icon aria-hidden="true" className="rv-kpi-card__glyph" strokeWidth={1.75} />
+        <span className="min-w-0 leading-snug">{label}</span>
       </span>
 
       {loading ? (
-        <span className="mt-3 block" aria-hidden="true">
-          <span className="skeleton block h-8 w-20" />
-          <span className="mt-3 block pt-3">
-            <span className="skeleton block h-4 w-28" />
-          </span>
-        </span>
+        <div aria-hidden="true">
+          <span className="skeleton rv-kpi-card__value block h-7 w-16" />
+          {hasFooter && (
+            <p className="rv-kpi-card__footer">
+              <span className="skeleton block h-3 w-32" />
+            </p>
+          )}
+        </div>
       ) : (
         <>
-          <span className="mt-3 flex items-baseline gap-1 whitespace-nowrap text-[28px] font-medium leading-9 tracking-tight tabular-nums text-ink">
-            {display}
-            {showUnit && <span className="text-sm font-normal tracking-normal text-muted">{unit}</span>}
-          </span>
+          <p className="rv-kpi-card__value flex items-baseline gap-1 whitespace-nowrap">
+            <span>{display}</span>
+            {showUnit && <span className="text-xs font-medium text-muted">{unit}</span>}
+          </p>
           {hasFooter && (
-            <span className="mt-auto flex min-w-0 items-center gap-2 pt-3 text-xs tabular-nums text-muted">
-              {emphasis != null && (
-                <span
-                  className="shrink-0 rounded-md px-1.5 py-0.5 font-medium"
-                  style={{ backgroundColor: colors.bg, color: colors.fg }}
-                >
-                  {emphasis}
-                </span>
-              )}
-              {caption != null && <span className="min-w-0 truncate">{caption}</span>}
-            </span>
+            <p className="rv-kpi-card__footer truncate tabular-nums">
+              {emphasis != null && <span className="text-ink-soft">{emphasis}</span>}
+              {emphasis != null && caption != null && " "}
+              {caption}
+            </p>
           )}
         </>
       )}
     </>
   );
-
-  const base =
-    "flex h-full w-full min-w-0 flex-col rounded-xl border bg-surface p-4 text-left shadow-(--shadow-card) transition-[border-color,box-shadow] duration-150";
 
   if (interactive) {
     return (
@@ -277,16 +259,14 @@ export function KpiCard({
         type="button"
         onClick={onClick}
         aria-pressed={selected}
-        className={`${base} ${
-          selected ? "border-primary ring-1 ring-primary" : "border-kpi-border hover:border-muted/60"
-        }`}
+        className={`${shellClass} outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas`}
       >
         {content}
       </button>
     );
   }
 
-  return <div className={`${base} border-kpi-border`}>{content}</div>;
+  return <div className={shellClass}>{content}</div>;
 }
 
 export function InfoTile({ value, label }: { value: ReactNode; label: string }) {
@@ -496,35 +476,6 @@ export function Pagination({
     </nav>
   );
 }
-
-export {
-  tableClass,
-  tableClassDense,
-  tableClassInteractive,
-  tableClassMatrix,
-  tableClassProseHeader,
-  tableFrameClass,
-  tableFrameNestedClass,
-  tableHeadClass,
-  tableStickyColClass,
-  tableTotalColClass,
-} from "./tableClasses";
-
-export {
-  HoursMetricPill,
-  TableEmpty,
-  TableHourCell,
-  TableNumeric,
-  TableText,
-  chipClass,
-  metricPillClass,
-  tableBodyId,
-  tableBodyMeta,
-  tableBodyNumeric,
-  tableBodyNumericStrong,
-  tableBodyText,
-  tableRowActionClass,
-} from "./tableCells";
 
 export function TableFrame({
   nested = false,

@@ -235,7 +235,13 @@ export interface ProjectDetail {
     start: string | null;
     end: string | null;
   };
-  summary: { employees: number; planned_hours: number | null; start: string | null; end: string | null };
+  summary: {
+    employees: number;
+    planned_hours: number | null;
+    start: string | null;
+    end: string | null;
+    months_with_planned_hours: number;
+  };
   trend: { month: number; label: string; has_data: boolean; planned_hours: number | null }[];
   months: { key: number; label: string }[];
   employees: {

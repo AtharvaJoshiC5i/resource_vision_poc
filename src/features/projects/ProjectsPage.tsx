@@ -1,20 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowLeft,
-  CalendarClock,
-  Check,
-  ChevronDown,
   ClipboardList,
   FolderKanban,
-  Search,
   TrendingUp,
   UsersRound,
 } from "lucide-react";
 
-import type { ProjectDetail, ProjectOptions, ProjectsOverview } from "../../api/types";
-import { MultiSelect } from "../../components/ui/MultiSelect";
+import type { Meta, ProjectDetail, ProjectsOverview } from "../../api/types";
 import { PageZones } from "../../components/layout/pageZones";
 import {
   Card,
@@ -25,16 +20,19 @@ import {
   LoadingBlock,
   Pill,
   SectionHeader,
-  fieldClass,
+} from "../../components/ui/primitives";
+import {
+  tableClassMatrix,
+  tableStickyColClass,
+  tableTotalColClass,
+} from "../../components/ui/tableClasses";
+import {
   TableEmpty,
   TableHourCell,
   TableNumeric,
   tableBodyId,
   tableBodyMeta,
-  tableClassMatrix,
-  tableStickyColClass,
-  tableTotalColClass,
-} from "../../components/ui/primitives";
+} from "../../components/ui/tableCells";
 import { useScrollEdges } from "../../hooks/useScrollEdges";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
@@ -44,14 +42,6 @@ import { projectStatusTone } from "../../lib/status";
 import { ProjectsDirectory } from "./ProjectsDirectory";
 
 const COVERAGE_DEFAULT = "All Projects";
-
-const profileControlLabel = "mb-1.5 block text-xs font-medium text-muted";
-
-/** Profile row: reporting months + project switcher share one control height. */
-const profileFilterTrigger = "!h-14 !min-h-14 items-center py-0";
-
-const projectSelectTrigger =
-  "w-full rounded-lg border border-border bg-surface text-sm text-ink transition-colors hover:border-muted/60 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15";
 
 /** Shared viewport height for team table and trend chart (fixed, not min-* stacking). */
 const PROJECT_WORK_VIEWPORT = "h-[max(15rem,min(19.5rem,36dvh))] max-h-[max(15rem,min(19.5rem,36dvh))]";
@@ -116,52 +106,31 @@ function ProjectRecordSection({ title, children }: { title: string; children: Re
 function ProjectProfileStats({
   plannedHours,
   employees,
-  monthCount,
 }: {
   plannedHours: number | null | undefined;
   employees: number;
-  monthCount: number;
 }) {
-  const items = [
-    {
-      label: "Planned",
-      value: hours(plannedHours),
-      unit: plannedHours !== null && plannedHours !== undefined ? "h" : undefined,
-      hint: "Selected months",
-    },
-    {
-      label: "Team",
-      value: integer(employees),
-      unit: undefined,
-      hint: employees === 1 ? "Employee" : "Employees",
-    },
-    {
-      label: "Months",
-      value: integer(monthCount),
-      unit: undefined,
-      hint: "In matrix",
-    },
-  ] as const;
+  const hasPlanned = plannedHours !== null && plannedHours !== undefined;
 
   return (
     <div
       role="group"
       aria-label="Project summary statistics"
-      className="grid w-full grid-cols-3 overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]"
+      className="grid w-full min-w-[14rem] grid-cols-2 divide-x divide-hairline overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card)"
     >
-      {items.map((item, index) => (
-        <div
-          key={item.label}
-          className={`flex min-w-0 flex-col justify-center px-3 py-3 sm:px-3.5 sm:py-3.5 ${index > 0 ? "border-l border-hairline" : ""}`}
-        >
-          <span className="rv-eyebrow">{item.label}</span>
-          <p className="mt-1 flex min-w-0 items-baseline gap-1">
-            <span className="truncate text-sm font-semibold tabular-nums tracking-tight text-ink">{item.value}</span>
-            {item.unit ? <span className="shrink-0 text-[12px] font-medium text-muted">{item.unit}</span> : null}
-          </p>
-          <span className="mt-0.5 text-[11px] leading-snug text-muted">{item.hint}</span>
-        </div>
-      ))}
+      <div className="flex min-w-0 flex-col px-4 py-3.5 sm:px-5 sm:py-4">
+        <span className="rv-eyebrow">Planned hours</span>
+        <p className="mt-2 flex min-w-0 items-baseline gap-1.5">
+          <span className="truncate text-xl font-medium tabular-nums tracking-tight text-ink">{hours(plannedHours)}</span>
+          {hasPlanned ? <span className="shrink-0 text-xs font-medium text-muted">h</span> : null}
+        </p>
+        <span className="mt-1.5 text-[11px] leading-snug text-muted">In the reporting window</span>
+      </div>
+      <div className="flex min-w-0 flex-col px-4 py-3.5 sm:px-5 sm:py-4">
+        <span className="rv-eyebrow">Team</span>
+        <p className="mt-2 text-xl font-medium tabular-nums tracking-tight text-ink">{integer(employees)}</p>
+        <span className="mt-1.5 text-[11px] leading-snug text-muted">Allocation rows in matrix</span>
+      </div>
     </div>
   );
 }
@@ -172,47 +141,10 @@ function reportingWindowLabel(months: ProjectDetail["months"]) {
   return `${months[0]!.label} – ${months[months.length - 1]!.label} (${months.length} months)`;
 }
 
-type ProjectListOption = { id: string; label: string };
-
-/** Options API uses `id: name`; split so ID and title are not shown twice. */
-function parseProjectOption(option: ProjectListOption): { id: string; name: string } {
-  const id = option.id.trim();
-  let name = option.label.trim();
-  if (name.startsWith(`${id}:`)) name = name.slice(id.length + 1).trim();
-  else if (name.startsWith(`${id} -`)) name = name.slice(id.length + 2).trim();
-  else {
-    const colon = name.indexOf(":");
-    if (colon > 0 && name.slice(0, colon).trim() === id) name = name.slice(colon + 1).trim();
-  }
-  if (!name) name = option.label;
-  return { id, name };
-}
-
-const projectIdentityGrid = "grid w-full min-w-0 items-center gap-x-3";
-const projectIdentityCols = "[grid-template-columns:minmax(5.25rem,7.5rem)_1px_minmax(0,1fr)]";
-
-function ProjectIdentityGrid({
-  id,
-  name,
-  nameClass = "line-clamp-2 text-[14px] font-medium leading-snug text-ink",
-  idClass = "text-[12px] font-semibold tabular-nums text-ink-soft",
-}: {
-  id: string;
-  name: string;
-  nameClass?: string;
-  idClass?: string;
-}) {
-  return (
-    <div className={`${projectIdentityGrid} ${projectIdentityCols}`}>
-      <span className={`min-w-0 truncate ${idClass}`} title={id}>
-        {id}
-      </span>
-      <span aria-hidden="true" className="h-8 w-px shrink-0 bg-hairline" />
-      <span className={`min-w-0 ${nameClass}`} title={name}>
-        {name}
-      </span>
-    </div>
-  );
+function metaReportingWindowLabel(window: Meta["window"]) {
+  if (window.length === 0) return "No months in view";
+  if (window.length === 1) return window[0]!.label;
+  return `${window[0]!.label} – ${window[window.length - 1]!.label} (${window.length} months)`;
 }
 
 /** Bar top labels: stroke outline keeps figures readable when months are narrow. */
@@ -481,152 +413,18 @@ function EmployeeAllocation({ detail }: { detail: ProjectDetail }) {
   );
 }
 
-function ProjectDropdown({
-  selectedId,
-  project,
-  options,
-  onSelect,
-}: {
-  selectedId: string;
-  project: ProjectDetail["project"];
-  options: ProjectListOption[];
-  onSelect: (id: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState("");
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
-
-  const parsedOptions = useMemo(() => options.map((o) => ({ ...parseProjectOption(o), raw: o })), [options]);
-
-  const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return parsedOptions;
-    return parsedOptions.filter((o) => o.id.toLowerCase().includes(q) || o.name.toLowerCase().includes(q));
-  }, [filter, parsedOptions]);
-
-  const pick = (id: string) => {
-    setOpen(false);
-    setFilter("");
-    onSelect(id);
-  };
-
-  return (
-    <div ref={rootRef} className="relative w-full">
-      <label id="project-select-label" className={profileControlLabel}>
-        Project
-      </label>
-      <button
-        type="button"
-        id="project-select"
-        aria-labelledby="project-select-label"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls="project-select-list"
-        onClick={() => setOpen((value) => !value)}
-        className={`${projectSelectTrigger} flex h-14 min-h-14 items-center justify-between gap-2.5 px-3 text-left ${open ? "border-primary ring-2 ring-primary/15" : ""}`}
-      >
-        <span className="flex min-w-0 flex-1 items-center gap-2.5">
-          <span
-            aria-hidden="true"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary-soft text-primary"
-          >
-            <FolderKanban className="h-4 w-4" />
-          </span>
-          <span className="min-w-0 flex-1 py-0.5">
-            <ProjectIdentityGrid id={project.id} name={project.name} />
-          </span>
-        </span>
-        <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 text-muted ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute inset-x-0 z-30 mt-2 overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-popover) sm:inset-x-auto sm:right-0 sm:w-full sm:min-w-[26rem]">
-          <div className="border-b border-hairline px-3 py-3">
-            <div className="relative">
-              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-              <input
-                type="search"
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                placeholder="Search by name or ID"
-                className={`${fieldClass} h-10 pl-9`}
-                autoFocus
-              />
-            </div>
-          </div>
-          <div
-            className={`${projectIdentityGrid} ${projectIdentityCols} rv-eyebrow border-b border-hairline bg-canvas/50 px-3.5 py-2`}
-            aria-hidden="true"
-          >
-            <span>Project ID</span>
-            <span />
-            <span>Project name</span>
-          </div>
-          <ul id="project-select-list" role="listbox" aria-label="Projects" className="max-h-72 overflow-y-auto py-1">
-            {filtered.length === 0 ? (
-              <li className="px-4 py-4 text-sm text-muted">No projects match your search</li>
-            ) : (
-              filtered.map((option) => {
-                const active = option.id === selectedId;
-                return (
-                  <li key={option.id} role="option" aria-selected={active}>
-                    <button
-                      type="button"
-                      onClick={() => pick(option.id)}
-                      className={`flex w-full items-center gap-2 px-3.5 py-2.5 text-left hover:bg-canvas ${active ? "bg-primary-soft/50" : ""}`}
-                    >
-                      <span className="min-w-0 flex-1">
-                        <ProjectIdentityGrid
-                          id={option.id}
-                          name={option.name}
-                          idClass="text-xs font-semibold tabular-nums text-ink-soft"
-                          nameClass="line-clamp-2 text-[13px] font-medium leading-snug text-ink"
-                        />
-                      </span>
-                      {active && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-primary" />}
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-          <div className="border-t border-hairline px-4 py-2.5 text-xs tabular-nums text-muted">
-            {integer(filtered.length)} {filtered.length === 1 ? "project" : "projects"}
-            {filter.trim() ? " match" : ""}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ProjectProfileOverview({
   detail,
   hiddenByFilters,
-  monthOptions,
-  selectedMonths,
-  onMonthsChange,
-  switcher,
+  reportingWindowLabel: fullWindowLabel,
 }: {
   detail: ProjectDetail;
   hiddenByFilters: boolean;
-  monthOptions: { value: string; label: string; hint?: string }[];
-  selectedMonths: string[];
-  onMonthsChange: (months: string[]) => void;
-  switcher: ReactNode;
+  reportingWindowLabel: string;
 }) {
-  const { project, summary, months, trend } = detail;
+  const { project, summary } = detail;
   const tone = projectStatusTone(project.status);
-  const windowLabel = reportingWindowLabel(months);
-  const monthsWithHours = trend.filter((t) => t.has_data && t.planned_hours !== null).length;
+  const monthsWithHours = summary.months_with_planned_hours;
   const description = project.description?.trim();
 
   const scheduleLine =
@@ -677,31 +475,8 @@ function ProjectProfileOverview({
             </div>
           </div>
           <div className="w-full min-w-0 shrink-0 sm:max-w-md xl:max-w-[22rem]">
-            <ProjectProfileStats
-              plannedHours={summary.planned_hours}
-              employees={summary.employees}
-              monthCount={months.length}
-            />
+            <ProjectProfileStats plannedHours={summary.planned_hours} employees={summary.employees} />
           </div>
-        </div>
-      </div>
-
-      <div className="border-b border-hairline bg-canvas/25 px-5 py-4 sm:px-6">
-        <p className="rv-eyebrow text-ink-soft">Reporting context</p>
-        <p className="mt-0.5 text-[12px] text-muted">Choose months and switch project without returning to the portfolio.</p>
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="flex min-w-0 flex-col">
-            <MultiSelect
-              label="Reporting months"
-              labelClassName={profileControlLabel}
-              triggerClassName={profileFilterTrigger}
-              options={monthOptions}
-              selected={selectedMonths}
-              onChange={onMonthsChange}
-            />
-            <p className="mt-1.5 text-xs text-muted">Allocations and KPIs use {windowLabel.toLowerCase()}</p>
-          </div>
-          <div className="flex min-w-0 flex-col lg:max-w-none">{switcher}</div>
         </div>
       </div>
 
@@ -725,7 +500,7 @@ function ProjectProfileOverview({
             <ProjectRecordSection title="Schedule and reporting">
               <ProjectFactRow label="Start date" value={shortDate(summary.start)} numeric />
               <ProjectFactRow label="End date" value={shortDate(summary.end)} numeric />
-              <ProjectFactRow label="Reporting window" value={windowLabel} />
+              <ProjectFactRow label="Reporting window" value={fullWindowLabel} />
               <ProjectFactRow label="Months with data" value={integer(monthsWithHours)} numeric />
             </ProjectRecordSection>
           </div>
@@ -740,18 +515,17 @@ function ProjectProfileOverview({
 
       <div className="border-t border-hairline bg-canvas/30 px-5 py-4 sm:px-6">
         <h2 id="project-kpi-heading" className="text-base font-medium text-ink">
-          Snapshot · {windowLabel}
+          Snapshot · {fullWindowLabel}
         </h2>
-        <p className="mt-0.5 text-[12px] text-muted">Key totals for the reporting months selected above</p>
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Employees" icon={UsersRound} value={summary.employees} caption="With allocation rows in view" />
+        <p className="mt-0.5 text-[12px] text-muted">Key totals for the full reporting window</p>
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <KpiCard label="Employees" icon={UsersRound} value={summary.employees} caption="With allocations in the window" />
           <KpiCard
             label="Planned hours"
             icon={ClipboardList}
             value={summary.planned_hours !== null ? hours(summary.planned_hours) : undefined}
-            caption="Across selected months"
+            caption="In the reporting window"
           />
-          <KpiCard label="Months in view" icon={CalendarClock} value={months.length} caption="In the allocation matrix" />
           <KpiCard
             label="Months with data"
             icon={TrendingUp}
@@ -830,21 +604,15 @@ export function ProjectsPage() {
   const search = url.getOne("q");
   const selectedId = url.getOne("project");
 
-  const options = useApi<ProjectOptions>("/projects/options");
+  const meta = useApi<Meta>("/meta");
   const params = { months, contract_category: contract, search };
   const overview = useApi<ProjectsOverview>(selectedId ? "/projects" : null, { ...params, coverage });
   const detail = useApi<ProjectDetail>(selectedId ? `/projects/${encodeURIComponent(selectedId)}` : null, { months });
+  const fullWindowLabel = metaReportingWindowLabel(meta.data?.window ?? []);
 
   const hiddenByFilters = Boolean(
     selectedId && overview.data && !overview.data.rows.some((r) => r.id === selectedId),
   );
-
-  const monthOptions =
-    options.data?.months.map((m) => ({
-      value: String(m.key),
-      label: m.label,
-      hint: m.has_data ? undefined : "No data",
-    })) ?? [];
 
   if (!selectedId) {
     return <ProjectsDirectory onOpen={(id) => url.setValues({ project: id })} />;
@@ -871,17 +639,7 @@ export function ProjectsPage() {
           <ProjectProfileOverview
             detail={detail.data}
             hiddenByFilters={hiddenByFilters}
-            monthOptions={monthOptions}
-            selectedMonths={months}
-            onMonthsChange={(values) => url.setValues({ months: values })}
-            switcher={
-              <ProjectDropdown
-                selectedId={selectedId}
-                project={project}
-                options={options.data?.projects ?? []}
-                onSelect={(id) => url.setValues({ project: id })}
-              />
-            }
+            reportingWindowLabel={fullWindowLabel}
           />
           <ProjectWorkPanel detail={detail.data} />
         </>

@@ -1,28 +1,22 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { UsersRound } from "lucide-react";
 
-import type { AvailabilityMatrix, AvailabilityOptions, AvailabilityOverview, AvailabilityStatus } from "../../api/types";
-import { integer } from "../../lib/format";
+import type { AvailabilityOptions, AvailabilityOverview, AvailabilityStatus } from "../../api/types";
 import { MultiSelect } from "../../components/ui/MultiSelect";
 import { FilterCard, PageZones, SummarySection } from "../../components/layout/pageZones";
 import {
   Card,
-  EmptyBlock,
   ErrorBlock,
   KpiCard,
   LoadingBlock,
   PageHeader,
-  Pagination,
   SectionHeader,
-  TableSkeleton,
 } from "../../components/ui/primitives";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { CONTRACT_CHART_COLOR, CONTRACT_ORDER, STATUS_ICON, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
-import { AvailabilityMatrixView, MatrixLegend } from "./AvailabilityMatrix";
 import { MonthlyStackedChart, type ChartMonth } from "./MonthlyStackedChart";
 
-const PAGE_SIZE = 50;
 const FILTER_KEYS = ["months", "cc", "division", "cap", "grade", "loc"];
 
 type OverviewKpis = AvailabilityOverview["kpis"];
@@ -34,16 +28,6 @@ const STATUS_CARDS: { status: AvailabilityStatus; label: string; key: keyof Over
   { status: "Over-allocated", label: "Over-allocated", key: "over_allocated" },
   { status: "Unverified", label: "Unverified", key: "unverified" },
 ];
-
-/** "42 at peak in Mar 2027" for the busiest month of a series, split for the card footer. */
-function peakFooter(months: AvailabilityOverview["months"], values: (number | null)[]) {
-  let best = -1;
-  values.forEach((v, i) => {
-    if (v !== null && (best < 0 || v > (values[best] ?? 0))) best = i;
-  });
-  if (best < 0) return { emphasis: undefined, caption: "No monthly records" };
-  return { emphasis: integer(values[best]), caption: `at peak in ${months[best].label}` };
-}
 
 export function AvailabilityPage() {
   const url = useUrlFilters();
@@ -68,15 +52,8 @@ export function AvailabilityPage() {
     [url.params],
   );
 
-  // Any filter change returns to the first page.
-  const filterKey = JSON.stringify(filterParams);
-  const [pageState, setPageState] = useState({ key: filterKey, page: 1 });
-  const page = pageState.key === filterKey ? pageState.page : 1;
-  const setPage = (next: number) => setPageState({ key: filterKey, page: next });
-
   const options = useApi<AvailabilityOptions>("/availability/options");
   const overview = useApi<AvailabilityOverview>("/availability/overview", filterParams);
-  const matrix = useApi<AvailabilityMatrix>("/availability/matrix", { ...filterParams, page, page_size: PAGE_SIZE });
 
   const activeFilters = FILTER_KEYS.filter((key) => url.getAll(key).length > 0).length;
   const resetAll = () => url.reset();
@@ -96,8 +73,6 @@ export function AvailabilityPage() {
     values: m.contracts,
   }));
   const kpis = overview.data?.kpis;
-  const overviewMonths = overview.data?.months ?? [];
-  const totalTrend = overviewMonths.map((m) => (m.has_data ? m.total : null));
 
   return (
     <PageZones>
@@ -106,10 +81,45 @@ export function AvailabilityPage() {
         subtitle="Planned effort from Project Track across the reporting window. This is planned allocation, not actual utilization."
       />
 
+      <SummarySection
+        id="availability-summary-heading"
+        subtitle="Distinct employees across the full reporting window. An employee who changes status between months is counted under each status they had. Reporting month affects the charts below, not these totals."
+        footnote="Unverified covers zero-effort records, records needing review and employees without an HR match."
+      >
+        {overview.error ? (
+          <ErrorBlock message={overview.error} onRetry={overview.reload} />
+        ) : (
+          <div className="@container">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6">
+              <KpiCard
+                label="Employees with records"
+                value={kpis?.employees_with_records}
+                icon={UsersRound}
+                loading={!kpis}
+              />
+              {STATUS_CARDS.map(({ status, label, key }) => (
+                <KpiCard
+                  key={status}
+                  label={label}
+                  value={kpis?.[key]}
+                  status={status}
+                  icon={STATUS_ICON[status]}
+                  loading={!kpis}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </SummarySection>
+
       <FilterCard
         filterCount={activeFilters}
         filterTotal={FILTER_KEYS.length}
-        subtitle={activeFilters > 0 ? undefined : "Showing all employees in the reporting window"}
+        subtitle={
+          activeFilters > 0
+            ? "KPI totals above always use the full reporting window. Filters here scope the trend charts."
+            : "Showing all employees in the reporting window"
+        }
         onReset={resetAll}
         resetDisabled={activeFilters === 0}
       >
@@ -159,42 +169,6 @@ export function AvailabilityPage() {
         </div>
       </FilterCard>
 
-      <SummarySection
-        id="availability-summary-heading"
-        subtitle="Distinct employees in the months in view. An employee who changes status between months is counted under each status they had."
-        footnote="Unverified covers zero-effort records, records needing review and employees without an HR match."
-      >
-        {overview.error ? (
-          <ErrorBlock message={overview.error} onRetry={overview.reload} />
-        ) : (
-          <div className="@container">
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6">
-            <KpiCard
-              label="Employees with records"
-              value={kpis?.employees_with_records}
-              icon={UsersRound}
-              {...peakFooter(overviewMonths, totalTrend)}
-              loading={!kpis}
-            />
-            {STATUS_CARDS.map(({ status, label, key }) => {
-              const trend = overviewMonths.map((m) => (m.has_data ? m.statuses[status] : null));
-              return (
-                <KpiCard
-                  key={status}
-                  label={label}
-                  value={kpis?.[key]}
-                  status={status}
-                  icon={STATUS_ICON[status]}
-                  {...peakFooter(overviewMonths, trend)}
-                  loading={!kpis}
-                />
-              );
-            })}
-          </div>
-          </div>
-        )}
-      </SummarySection>
-
       <section aria-labelledby="availability-trends-heading">
         <SectionHeader
           id="availability-trends-heading"
@@ -226,34 +200,6 @@ export function AvailabilityPage() {
           </Card>
         </div>
       </section>
-
-      <Card
-        title="Allocation by employee and month"
-        titleId="availability-matrix-heading"
-        subtitle="One row per employee. Hover or focus a cell for the status and remaining hours."
-      >
-        <div className="mb-4">
-          <MatrixLegend />
-        </div>
-        {matrix.error ? (
-          <ErrorBlock message={matrix.error} onRetry={matrix.reload} />
-        ) : !matrix.data ? (
-          <TableSkeleton rows={8} columns={10} label="Loading employee matrix" />
-        ) : matrix.data.rows.length === 0 ? (
-          <EmptyBlock message="No employees match the current filters" />
-        ) : (
-          <>
-            <AvailabilityMatrixView matrix={matrix.data} />
-            <Pagination
-              page={matrix.data.page}
-              pages={matrix.data.pages}
-              total={matrix.data.total}
-              pageSize={matrix.data.page_size}
-              onChange={setPage}
-            />
-          </>
-        )}
-      </Card>
     </PageZones>
   );
 }

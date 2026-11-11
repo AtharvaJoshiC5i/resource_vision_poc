@@ -75,3 +75,6 @@ export function projectStatusTone(status: string): { bg: string; fg: string } {
   }
   return { bg: "var(--color-canvas)", fg: "var(--color-ink-soft)" };
 }
+
+/** Matrix status-filter token for employees with no Project Track row in a month that has data. */
+export const NO_RECORD_FILTER = "No record";

@@ -1,19 +1,14 @@
-import { Fragment, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   ArrowLeft,
   CalendarCheck,
   CalendarClock,
-  Check,
-  ChevronDown,
   ChevronRight,
   ClipboardCheck,
   ClipboardList,
-  CalendarDays,
   Clock,
-  Search,
-  UserRound,
 } from "lucide-react";
 
 import type {
@@ -22,7 +17,6 @@ import type {
   AvailabilityStatus,
   EmployeeDetail,
   EmployeeMonthRow,
-  EmployeeOption,
   Meta,
 } from "../../api/types";
 import {
@@ -37,18 +31,21 @@ import {
   SectionHeader,
   SegmentedControl,
   StatusBadge,
-  fieldClass,
-  TableEmpty,
   TableFrame,
-  TableNumeric,
+} from "../../components/ui/primitives";
+import {
   tableClassDense,
   tableClassProseHeader,
   tableHeadClass,
-} from "../../components/ui/primitives";
+} from "../../components/ui/tableClasses";
+import {
+  TableEmpty,
+  TableNumeric,
+} from "../../components/ui/tableCells";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { CHART_AXIS, CHART_AXIS_TITLE, CHART_CURSOR, CHART_GRID } from "../../lib/chart";
-import { EM_DASH, compactMonth, hours, integer, shortDate, text } from "../../lib/format";
+import { EM_DASH, compactMonth, hours, shortDate, text } from "../../lib/format";
 import { STATUS_STYLE, projectStatusTone } from "../../lib/status";
 import { PageZones } from "../../components/layout/pageZones";
 import { EmployeeDirectory } from "./EmployeeDirectory";
@@ -62,18 +59,10 @@ function isStatus(value: string | null): value is AvailabilityStatus {
   return value !== null && value in STATUS_STYLE;
 }
 
-/** "2026-11-06" -> 202611, the month key format used by the API. */
-function monthKeyOf(iso: string | undefined): number | null {
-  if (!iso) return null;
-  const [year, month] = iso.split("-").map(Number);
-  return year && month ? year * 100 + month : null;
-}
-
-function resolveFocusMonth(months: EmployeeMonthRow[], urlMonth: string, todayMonth: number | null): number {
-  const parsed = Number(urlMonth);
-  if (urlMonth && months.some((m) => m.month === parsed)) return parsed;
-  if (todayMonth !== null && months.some((m) => m.month === todayMonth)) return todayMonth;
-  return months.find((m) => m.present)?.month ?? months[0]?.month ?? 0;
+function employeeWindowLabel(months: EmployeeMonthRow[]) {
+  if (months.length === 0) return "No months in view";
+  if (months.length === 1) return months[0].label;
+  return `${months[0].label} – ${months[months.length - 1].label}`;
 }
 
 function StatusCell({ status }: { status: string | null }) {
@@ -93,7 +82,7 @@ const EMPLOYEE_MONTHLY_TABLE = [
 ].join(" ");
 
 /* ----------------------------------------------------------------------------- availability over time */
-function MonthlyTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMonth: number | null }) {
+function MonthlyTable({ detail }: { detail: EmployeeDetail }) {
   return (
     <TableFrame nested tabIndex={0} role="region" aria-label="Monthly allocation and availability" className="mt-0">
       <table className={EMPLOYEE_MONTHLY_TABLE}>
@@ -127,7 +116,7 @@ function MonthlyTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMon
           {detail.months.map((m: EmployeeMonthRow) => (
             <tr
               key={m.month}
-              className={`${focusMonth === m.month ? "rv-table-row--accent" : ""} ${m.present ? "text-ink-soft" : "rv-table-row--muted"}`}
+              className={m.present ? "text-ink-soft" : "rv-table-row--muted"}
             >
               <th
                 scope="row"
@@ -316,12 +305,10 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
 function AvailabilityOverTime({
   detail,
   capacity,
-  focusMonth,
   className = "",
 }: {
   detail: EmployeeDetail;
   capacity: number | undefined;
-  focusMonth: number | null;
   className?: string;
 }) {
   const [view, setView] = useState<"chart" | "table">("chart");
@@ -348,45 +335,35 @@ function AvailabilityOverTime({
         {view === "chart" ? (
           <TrendChart months={detail.months} capacity={capacity} />
         ) : (
-          <MonthlyTable detail={detail} focusMonth={focusMonth} />
+          <MonthlyTable detail={detail} />
         )}
       </div>
     </Card>
   );
 }
 
-function EmployeeWorkPanel({
-  detail,
-  capacity,
-  focusMonth,
-  focusLabel,
-}: {
-  detail: EmployeeDetail;
-  capacity: number | undefined;
-  focusMonth: number;
-  focusLabel: string;
-}) {
-  const monthRows = detail.allocations.rows.filter((r) => r.month === focusMonth);
-  const projectCount = new Set(monthRows.map((r) => r.project_id)).size;
+function EmployeeWorkPanel({ detail, capacity }: { detail: EmployeeDetail; capacity: number | undefined }) {
+  const windowLabel = employeeWindowLabel(detail.months);
+  const projectCount = detail.totals.project_count;
 
   return (
     <section aria-labelledby="emp-work-heading">
       <SectionHeader
         id="emp-work-heading"
         title="Work and capacity"
-        subtitle={`Allocations and availability for ${focusLabel}. The trend chart still shows the full reporting window.`}
+        subtitle={`Allocations and availability across ${windowLabel}.`}
       />
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
         <Card
           title="Projects"
           titleId="emp-projects-heading"
-          subtitle={`${projectCount} ${projectCount === 1 ? "project" : "projects"} with records in ${focusLabel}. Expand for sub-projects.`}
+          subtitle={`${projectCount} ${projectCount === 1 ? "project" : "projects"} in the reporting window. Expand for monthly and sub-project detail.`}
         >
           <div className={WORK_PANEL_SCROLL}>
-            <ProjectsTable detail={detail} focusMonth={focusMonth} />
+            <ProjectsTable detail={detail} />
           </div>
         </Card>
-        <AvailabilityOverTime detail={detail} capacity={capacity} focusMonth={focusMonth} />
+        <AvailabilityOverTime detail={detail} capacity={capacity} />
       </div>
     </section>
   );
@@ -497,13 +474,9 @@ function projectHref(id: string) {
   return `/projects?project=${encodeURIComponent(id)}`;
 }
 
-function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMonth: number }) {
+function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const monthRows = useMemo(
-    () => detail.allocations.rows.filter((r) => r.month === focusMonth),
-    [detail.allocations.rows, focusMonth],
-  );
-  const projects = useMemo(() => groupByProject(monthRows), [monthRows]);
+  const projects = useMemo(() => groupByProject(detail.allocations.rows), [detail.allocations.rows]);
   const toggle = (id: string) =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -513,8 +486,7 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
     });
 
   if (projects.length === 0) {
-    const label = detail.months.find((m) => m.month === focusMonth)?.label ?? "this month";
-    return <EmptyBlock message={`No project allocations recorded for ${label}`} />;
+    return <EmptyBlock message="No project allocations recorded in the reporting window" />;
   }
 
   return (
@@ -633,8 +605,6 @@ function ProjectsTable({ detail, focusMonth }: { detail: EmployeeDetail; focusMo
 }
 
 /* ----------------------------------------------------------------------------- profile header */
-const profileControlLabel = "mb-1.5 block text-xs font-medium text-muted";
-
 function ProfileDetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas/40 px-3 py-2.5">
@@ -644,31 +614,14 @@ function ProfileDetailField({ label, value }: { label: string; value: ReactNode 
   );
 }
 
-function EmployeeProfileOverview({
-  detail,
-  focusMonth,
-  focusLabel,
-  monthOptions,
-  onFocusMonthChange,
-  switcher,
-}: {
-  detail: EmployeeDetail;
-  focusMonth: number;
-  focusLabel: string;
-  monthOptions: { value: string; label: string }[];
-  onFocusMonthChange: (month: number) => void;
-  switcher: ReactNode;
-}) {
-  const { profile, months } = detail;
+function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
+  const { profile, months, totals } = detail;
   const matched = profile.hr_match_status === "Matched to ZingHR";
-  const selected = months.find((m) => m.month === focusMonth);
-  const selectedStatus = selected?.present && isStatus(selected.status) ? selected.status : undefined;
+  const windowLabel = employeeWindowLabel(months);
+  const totalsStatus = totals.status && isStatus(totals.status) ? totals.status : undefined;
   const reviewHours =
-    selected?.present && selected.unresolved_hours !== null && selected.unresolved_hours > 0 ? selected.unresolved_hours : null;
-  const nextFree = months.find(
-    (m) => m.month >= focusMonth && m.present && m.remaining_hours !== null && m.remaining_hours > 0,
-  );
-  const monthSelectId = useId();
+    totals.unresolved_hours !== null && totals.unresolved_hours > 0 ? totals.unresolved_hours : null;
+  const monthsWithRecords = months.filter((m) => m.present).length;
   const metaLine = [profile.primary_capability, profile.grade, profile.location].filter(Boolean);
 
   return (
@@ -707,56 +660,26 @@ function EmployeeProfileOverview({
                     {profile.status}
                   </span>
                 )}
-                {selectedStatus && <StatusBadge status={selectedStatus} />}
+                {totalsStatus && <StatusBadge status={totalsStatus} />}
                 {!matched && <HrMatchFlag />}
               </div>
             </div>
           </div>
           <div className="flex shrink-0 flex-col rounded-lg border border-hairline bg-surface px-3 py-2.5 text-[12px] sm:min-w-[11rem]">
-            <span className="text-muted">Availability in {focusLabel}</span>
-            <span className="mt-0.5 font-medium text-ink">
-              {selected?.present && selected.remaining_hours !== null
-                ? `${hours(selected.remaining_hours)} h remaining`
-                : selected?.has_data
-                  ? "No record this month"
-                  : "No Project Track data"}
+            <span className="text-muted">Reporting window</span>
+            <span className="mt-0.5 font-medium text-ink">{windowLabel}</span>
+            <span className="mt-1 text-muted">
+              {totals.planned_hours !== null
+                ? `${hours(totals.planned_hours)} h planned`
+                : "No planned hours in window"}
             </span>
           </div>
         </div>
       </div>
 
       <div className="border-b border-hairline px-5 py-4 sm:px-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="min-w-0">
-            <label htmlFor={monthSelectId} className={profileControlLabel}>
-              Reporting month
-            </label>
-            <div className="relative">
-              <CalendarDays
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary"
-              />
-              <select
-                id={monthSelectId}
-                value={String(focusMonth)}
-                onChange={(event) => onFocusMonthChange(Number(event.target.value))}
-                className={`${fieldClass} h-9 pl-9 font-medium text-ink`}
-              >
-                {monthOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="min-w-0">{switcher}</div>
-        </div>
-      </div>
-
-      <div className="border-b border-hairline px-5 py-4 sm:px-6">
         <h2 className="text-base font-medium text-ink">Employee information</h2>
-        <p className="mt-0.5 text-[12px] text-muted">HR master data and contract context for the selected month</p>
+        <p className="mt-0.5 text-[12px] text-muted">HR master data and contract context for the reporting window</p>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
             <h3 className="rv-eyebrow">Role and organisation</h3>
@@ -788,7 +711,7 @@ function EmployeeProfileOverview({
                   )
                 }
               />
-              <ProfileDetailField label="Contract category" value={text(selected?.contract_category ?? null)} />
+              <ProfileDetailField label="Contract category" value={text(totals.contract_category || null)} />
             </dl>
           </div>
         </div>
@@ -796,40 +719,32 @@ function EmployeeProfileOverview({
 
       <div className="bg-canvas/30 px-5 py-4 sm:px-6">
         <h2 id="emp-kpi-heading" className="text-base font-medium text-ink">
-          Availability for {focusLabel}
+          Availability across the window
         </h2>
-        <p className="mt-0.5 text-[12px] text-muted">Planned effort, review hours, and remaining capacity for this month</p>
+        <p className="mt-0.5 text-[12px] text-muted">Window totals for {windowLabel}</p>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
-            label="Remaining capacity"
-            icon={CalendarCheck}
-            status={selectedStatus}
+            label="Months with records"
+            icon={CalendarClock}
             tone="neutral"
-            value={selected?.present && selected.remaining_hours !== null ? hours(selected.remaining_hours) : EM_DASH}
-            unit="h"
-            emphasis={selected?.present ? (selected.status ?? "No status") : undefined}
-            caption={
-              selected?.present
-                ? `in ${focusLabel}`
-                : selected?.has_data
-                  ? `No record in ${focusLabel}`
-                  : "No Project Track data this month"
-            }
+            value={monthsWithRecords}
+            caption={`of ${months.length} months in the window`}
           />
           <KpiCard
-            label="Next free capacity"
-            icon={CalendarClock}
-            tone={nextFree ? "success" : "neutral"}
-            value={nextFree ? (nextFree.month === focusMonth ? "Now" : nextFree.label) : EM_DASH}
-            emphasis={nextFree ? `${hours(nextFree.remaining_hours)} h` : undefined}
-            caption={nextFree ? "from this month forward" : "No free capacity in the window"}
+            label="Project allocations"
+            icon={CalendarCheck}
+            status={totalsStatus}
+            tone="neutral"
+            value={totals.project_count}
+            emphasis={totalsStatus}
+            caption="Project-month rows with data"
           />
           <KpiCard
             label="Planned hours"
             icon={Clock}
-            value={selected?.present && selected.planned_hours !== null ? hours(selected.planned_hours) : EM_DASH}
+            value={totals.planned_hours !== null ? hours(totals.planned_hours) : EM_DASH}
             unit="h"
-            caption={`Verified effort in ${focusLabel}`}
+            caption="Verified effort across the window"
           />
           <KpiCard
             label="Hours needing review"
@@ -846,181 +761,6 @@ function EmployeeProfileOverview({
   );
 }
 
-/* ----------------------------------------------------------------------------- employee switcher */
-function initialsOf(name: string) {
-  const parts = name.split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts.length > 1 ? (parts[parts.length - 1][0] ?? "") : "")).toUpperCase();
-}
-
-function EmployeeDropdown({
-  selected,
-  profile,
-  onSelect,
-}: {
-  selected: string;
-  profile: EmployeeDetail["profile"] | undefined;
-  onSelect: (key: string | null) => void;
-}) {
-  const roster = useApi<EmployeeOption[]>("/employees/search", { q: "" });
-  const rootRef = useRef<HTMLDivElement>(null);
-  const filterRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState("");
-  const [cursor, setCursor] = useState(0);
-
-  useEffect(() => {
-    if (!open) return;
-    filterRef.current?.focus();
-    const close = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-        setFilter("");
-      }
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-
-  const options = useMemo(() => {
-    const list = roster.data ?? [];
-    const q = filter.trim().toLowerCase();
-    const filtered = q
-      ? list.filter(
-          (o) =>
-            o.label.toLowerCase().includes(q) ||
-            o.key.toLowerCase().includes(q) ||
-            o.code.toLowerCase().includes(q) ||
-            o.name.toLowerCase().includes(q),
-        )
-      : list;
-    return filtered;
-  }, [roster.data, filter]);
-
-  const choose = (key: string) => {
-    onSelect(key);
-    setFilter("");
-    setCursor(0);
-    setOpen(false);
-  };
-
-  return (
-    <div ref={rootRef} className="relative w-full">
-      <label id="emp-select-label" className={profileControlLabel}>
-        Employee
-      </label>
-      <button
-        type="button"
-        id="emp-select"
-        aria-labelledby="emp-select-label"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-controls="emp-select-list"
-        onClick={() => setOpen((value) => !value)}
-        className={`${fieldClass} flex h-9 items-center justify-between gap-2 px-2.5 text-left ${open ? "border-primary ring-2 ring-primary/15" : ""}`}
-      >
-        <span className="flex min-w-0 flex-1 items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-purple-indigo"
-          >
-            {profile ? initialsOf(profile.name) : "—"}
-          </span>
-          <span className="min-w-0 flex-1 text-left">
-            <span className="block truncate text-[13px] font-medium text-ink">{profile?.name ?? "Select employee"}</span>
-            {profile && <span className="block truncate text-xs tabular-nums text-muted">{profile.code}</span>}
-          </span>
-        </span>
-        <UserRound aria-hidden="true" className="h-4 w-4 shrink-0 text-muted" />
-        <ChevronDown aria-hidden="true" className={`h-4 w-4 shrink-0 text-muted ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute inset-x-0 z-30 mt-1.5 overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-popover) sm:inset-x-auto sm:right-0 sm:w-full sm:min-w-[22rem]">
-          <div className="relative border-b border-hairline p-2">
-            <Search aria-hidden="true" className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
-              ref={filterRef}
-              type="search"
-              value={filter}
-              onChange={(event) => {
-                setFilter(event.target.value);
-                setCursor(0);
-              }}
-              placeholder="Search by name or code"
-              aria-label="Search employees"
-              className="h-8 w-full rounded-lg border border-transparent bg-canvas pl-9 pr-3 text-sm touch:text-[1rem] text-ink placeholder:text-muted focus:border-primary focus:bg-surface focus:outline-none touch:h-10"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  setOpen(false);
-                  setFilter("");
-                } else if (event.key === "ArrowDown") {
-                  event.preventDefault();
-                  setCursor((value) => Math.min(value + 1, options.length - 1));
-                } else if (event.key === "ArrowUp") {
-                  event.preventDefault();
-                  setCursor((value) => Math.max(value - 1, 0));
-                } else if (event.key === "Enter" && options[cursor]) {
-                  event.preventDefault();
-                  choose(options[cursor].key);
-                }
-              }}
-            />
-          </div>
-          <ul id="emp-select-list" role="listbox" aria-labelledby="emp-select-label" className="max-h-72 overflow-y-auto p-1">
-            {roster.loading && !roster.data ? (
-              <li className="px-3 py-6 text-center text-sm text-muted">Loading employees…</li>
-            ) : options.length === 0 ? (
-              <li className="px-3 py-6 text-center text-sm text-muted">No matching employees</li>
-            ) : (
-              options.map((option, index) => {
-                const active = option.key === selected;
-                const highlighted = index === cursor;
-                return (
-                  <li
-                    key={option.key}
-                    role="presentation"
-                    ref={(element) => {
-                      if (element && highlighted) element.scrollIntoView({ block: "nearest" });
-                    }}
-                  >
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      tabIndex={-1}
-                      className={`flex w-full items-center gap-3 rounded-lg px-2 py-1.5 touch:py-2.5 text-left ${
-                        highlighted ? "bg-canvas" : "hover:bg-canvas"
-                      }`}
-                      onMouseDown={(event) => event.preventDefault()}
-                      onMouseEnter={() => setCursor(index)}
-                      onClick={() => choose(option.key)}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-canvas text-xs font-medium text-ink-soft ring-1 ring-inset ring-hairline"
-                      >
-                        {initialsOf(option.name)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-medium text-ink">{option.name}</span>
-                        <span className="block truncate text-xs tabular-nums text-muted">{option.code}</span>
-                      </span>
-                      {active && <Check aria-hidden="true" className="h-4 w-4 shrink-0 text-primary" />}
-                    </button>
-                  </li>
-                );
-              })
-            )}
-          </ul>
-          <div className="border-t border-hairline px-4 py-2 text-xs tabular-nums text-muted">
-            {integer(options.length)} {options.length === 1 ? "employee" : "employees"}
-            {filter.trim() ? " match" : ""}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 /* ----------------------------------------------------------------------------- page */
 export function EmployeePage() {
   const url = useUrlFilters();
@@ -1029,16 +769,7 @@ export function EmployeePage() {
   const meta = useApi<Meta>("/meta");
   const detail = useApi<EmployeeDetail>(selected ? `/employees/${encodeURIComponent(selected)}` : null);
   const profile = detail.data?.profile;
-  const currentMonth = monthKeyOf(meta.data?.today);
   const monthParam = url.getOne("month");
-  const focusMonth =
-    detail.data && !detail.error ? resolveFocusMonth(detail.data.months, monthParam, currentMonth) : 0;
-  const focusLabel = detail.data?.months.find((m) => m.month === focusMonth)?.label ?? "";
-  const monthOptions =
-    detail.data?.months.map((m) => ({
-      value: String(m.month),
-      label: m.has_data ? m.label : `${m.label} (no PT data)`,
-    })) ?? [];
 
   const listReportingKey = resolveDirectoryReportingMonth(meta.data?.window ?? [], monthParam, meta.data?.today);
   const listMonthLabel = listReportingKey
@@ -1052,11 +783,11 @@ export function EmployeePage() {
           title="Employee 360"
           subtitle={
             listMonthLabel
-              ? `Allocation and availability for ${listMonthLabel}. Select a reporting month below, then open a profile.`
-              : "Allocation and projects for every employee"
+              ? `Allocation and availability for ${listMonthLabel}. Use filters to set reporting months, then open a profile.`
+              : "Allocation and projects for every employee. Use filters to set reporting months, then open a profile."
           }
         />
-        <EmployeeDirectory onOpen={(key) => url.setValues({ emp: key })} />
+        <EmployeeDirectory />
       </PageZones>
     );
   }
@@ -1077,16 +808,9 @@ export function EmployeePage() {
 
       {detail.data && !detail.error && profile && (
         <>
-          <EmployeeProfileOverview
-            detail={detail.data}
-            focusMonth={focusMonth}
-            focusLabel={focusLabel}
-            monthOptions={monthOptions}
-            onFocusMonthChange={(month) => url.setValues({ month: String(month) })}
-            switcher={<EmployeeDropdown selected={selected} profile={profile} onSelect={(key) => url.setValues({ emp: key })} />}
-          />
+          <EmployeeProfileOverview detail={detail.data} />
 
-          <EmployeeWorkPanel detail={detail.data} capacity={meta.data?.capacity_hours} focusMonth={focusMonth} focusLabel={focusLabel} />
+          <EmployeeWorkPanel detail={detail.data} capacity={meta.data?.capacity_hours} />
         </>
       )}
     </PageZones>

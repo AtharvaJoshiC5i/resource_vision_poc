@@ -32,6 +32,7 @@ def _filters(
     grade: Annotated[list[str] | None, Query()] = None,
     location: Annotated[list[str] | None, Query()] = None,
     search: Annotated[str | None, Query(max_length=100)] = None,
+    status: Annotated[list[str] | None, Query()] = None,
 ) -> views.Filters:
     return views.Filters(
         months=months or None,
@@ -41,6 +42,7 @@ def _filters(
         grades=set(grade or []),
         locations=set(location or []),
         search=search,
+        statuses=set(status or []),
     )
 
 

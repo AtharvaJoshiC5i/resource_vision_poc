@@ -37,6 +37,10 @@ class Filters:
     grades: set[str] = field(default_factory=set)
     locations: set[str] = field(default_factory=set)
     search: str | None = None
+    statuses: set[str] = field(default_factory=set)
+
+
+NO_RECORD_FILTER = "No record"
 
 
 def selected_months(snap: e.Snapshot, f: Filters) -> list[int]:
@@ -44,6 +48,20 @@ def selected_months(snap: e.Snapshot, f: Filters) -> list[int]:
         return list(snap.window)
     wanted = set(f.months)
     return [m for m in snap.window if m in wanted]
+
+
+def filters_without_months(f: Filters) -> Filters:
+    """KPI strips use the full reporting window; month pickers scope charts and tables only."""
+    return Filters(
+        months=None,
+        contract_categories=set(f.contract_categories),
+        divisions=set(f.divisions),
+        capabilities=set(f.capabilities),
+        grades=set(f.grades),
+        locations=set(f.locations),
+        search=f.search,
+        statuses=set(f.statuses),
+    )
 
 
 def _employee_ok(emp: e.Employee, f: Filters) -> bool:
@@ -97,13 +115,13 @@ def availability_options(snap: e.Snapshot) -> dict[str, Any]:
 
 
 def availability_overview(snap: e.Snapshot, f: Filters) -> dict[str, Any]:
-    ems = filtered_employee_months(snap, f)
+    ems_kpi = filtered_employee_months(snap, filters_without_months(f))
     status_sets: dict[str, set[str]] = {s: set() for s in e.STATUSES}
-    for em in ems:
+    for em in ems_kpi:
         status_sets[em.status].add(em.key)
 
     kpis = {
-        "employees_with_records": len({em.key for em in ems}),
+        "employees_with_records": len({em.key for em in ems_kpi}),
         "fully_available": len(status_sets[e.FULLY_AVAILABLE]),
         "partially_available": len(status_sets[e.PARTIALLY_AVAILABLE]),
         "fully_committed": len(status_sets[e.FULLY_COMMITTED]),
@@ -111,6 +129,7 @@ def availability_overview(snap: e.Snapshot, f: Filters) -> dict[str, Any]:
         "unverified": len(status_sets[e.UNVERIFIED]),
     }
 
+    ems = filtered_employee_months(snap, f)
     by_month_status: dict[int, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     by_month_contract: dict[int, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     by_month_all: dict[int, set[str]] = defaultdict(set)
@@ -150,6 +169,23 @@ def availability_matrix(
     else:
         candidates = {k for k, emp in snap.employees.items() if _employee_ok(emp, f)}
     keys = {k for k in candidates if _matches_search(snap.employees[k], f.search)}
+    if f.statuses:
+        # Keep employees who have any wanted status (or, for "No record", a missing row in a month that
+        # has Project Track data) in at least one selected month.
+        data_months = [m for m in selected_months(snap, f) if m in snap.months_with_data]
+        want_none = NO_RECORD_FILTER in f.statuses
+
+        def _hit(key: str) -> bool:
+            for m in data_months:
+                em = cell_lookup.get((key, m))
+                if em is None:
+                    if want_none:
+                        return True
+                elif em.status in f.statuses:
+                    return True
+            return False
+
+        keys = {k for k in keys if _hit(k)}
     people = sorted((snap.employees[k] for k in keys), key=lambda p: (p.code.casefold(), p.key))
 
     total = len(people)
@@ -485,11 +521,14 @@ def project_options(snap: e.Snapshot) -> dict[str, Any]:
     }
 
 
-def projects_overview(snap: e.Snapshot, f: Filters, coverage: str = "All Projects") -> dict[str, Any]:
-    months = selected_months(snap, f)
-    stats = _project_stats(snap, months)
+def _projects_overview_rows(
+    snap: e.Snapshot,
+    f: Filters,
+    months: list[int],
+    stats: dict[str, dict[str, Any]],
+    coverage: str,
+) -> list[dict[str, Any]]:
     needle = (f.search or "").strip().casefold()
-
     rows = []
     for p in snap.projects.values():
         s = stats.get(p.id)
@@ -518,23 +557,63 @@ def projects_overview(snap: e.Snapshot, f: Filters, coverage: str = "All Project
             }
         )
     rows.sort(key=lambda r: (r["name"].casefold(), r["id"]))
+    return rows
+
+
+def projects_overview(snap: e.Snapshot, f: Filters, coverage: str = "All Projects") -> dict[str, Any]:
+    months = selected_months(snap, f)
+    stats = _project_stats(snap, months)
+    rows = _projects_overview_rows(snap, f, months, stats, coverage)
+
+    kpi_months = list(snap.window)
+    kpi_stats = _project_stats(snap, kpi_months)
+    kpi_rows = _projects_overview_rows(snap, f, kpi_months, kpi_stats, coverage)
 
     assigned: set[str] = set()
-    for r in rows:
-        assigned |= stats[r["id"]]["employees"] if r["id"] in stats else set()
+    for r in kpi_rows:
+        assigned |= kpi_stats[r["id"]]["employees"] if r["id"] in kpi_stats else set()
     active = sum(
-        1 for r in rows
+        1 for r in kpi_rows
         if (snap.projects[r["id"]].start is not None and snap.projects[r["id"]].end is not None
             and snap.projects[r["id"]].start <= snap.today <= snap.projects[r["id"]].end)
     )
     return {
         "kpis": {
-            "total_projects": len(rows),
+            "total_projects": len(kpi_rows),
             "active_projects": active,
-            "projects_with_employees": sum(1 for r in rows if r["employees"] > 0),
+            "projects_with_employees": sum(1 for r in kpi_rows if r["employees"] > 0),
             "employees_assigned": 0 if coverage == "Without Allocations" else len(assigned),
         },
         "rows": rows,
+    }
+
+
+def _project_detail_summary(
+    snap: e.Snapshot, project_id: str, months: list[int], project: e.Project
+) -> dict[str, Any]:
+    in_months = set(months)
+    rows = [r for r in snap.rows if r.named and r.project_id == project_id and r.month in in_months]
+    by_employee: dict[str, list[e.PtRow]] = defaultdict(list)
+    for r in rows:
+        by_employee[r.employee_key].append(r)
+    trend = []
+    for m in months:
+        valid = [r.effort for r in rows if r.month == m and r.status == e.VALID]
+        trend.append(
+            {
+                "month": m,
+                "label": month_label(m),
+                "has_data": m in snap.months_with_data,
+                "planned_hours": sum(valid) if valid else None,
+            }
+        )
+    planned_values = [t["planned_hours"] for t in trend if t["planned_hours"] is not None]
+    return {
+        "employees": len(by_employee),
+        "planned_hours": sum(planned_values) if planned_values else None,
+        "start": _iso(project.start),
+        "end": _iso(project.end),
+        "months_with_planned_hours": len(planned_values),
     }
 
 
@@ -597,7 +676,7 @@ def project_detail(snap: e.Snapshot, project_id: str, f: Filters) -> dict[str, A
         )
     employees.sort(key=lambda r: r["code"].casefold())
 
-    planned_values = [t["planned_hours"] for t in trend if t["planned_hours"] is not None]
+    summary = _project_detail_summary(snap, project_id, list(snap.window), project)
     return {
         "project": {
             "id": project.id,
@@ -611,12 +690,7 @@ def project_detail(snap: e.Snapshot, project_id: str, f: Filters) -> dict[str, A
             "start": _iso(project.start),
             "end": _iso(project.end),
         },
-        "summary": {
-            "employees": len(by_employee),
-            "planned_hours": sum(planned_values) if planned_values else None,
-            "start": _iso(project.start),
-            "end": _iso(project.end),
-        },
+        "summary": summary,
         "trend": trend,
         "months": [{"key": m, "label": month_label(m)} for m in months],
         "employees": employees,

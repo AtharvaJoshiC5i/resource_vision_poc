@@ -230,7 +230,7 @@ def test_overview_by_month_and_blank_months():
 def test_filters_division_month_and_contract():
     s = availability_fixture()
     assert v.availability_overview(s, v.Filters(divisions={"Ops"}))["kpis"]["employees_with_records"] == 2
-    assert v.availability_overview(s, v.Filters(months=[202612]))["kpis"]["employees_with_records"] == 1
+    assert v.availability_overview(s, v.Filters(months=[202612]))["kpis"]["employees_with_records"] == 5
     prog = v.availability_overview(s, v.Filters(contract_categories={e.PROGRAM_BASED}))
     assert prog["kpis"]["employees_with_records"] == 1
 
@@ -371,7 +371,13 @@ def test_active_projects_are_date_based():
 def test_project_detail_matrix_states():
     s = projects_fixture()
     d = v.project_detail(s, "P1", v.Filters(months=[202611, 202612, 202701]))
-    assert d["summary"] == {"employees": 2, "planned_hours": 120.0, "start": "2026-01-01", "end": "2027-12-31"}
+    assert d["summary"] == {
+        "employees": 2,
+        "planned_hours": 120.0,
+        "start": "2026-01-01",
+        "end": "2027-12-31",
+        "months_with_planned_hours": 2,
+    }
     rows = {r["code"]: r for r in d["employees"]}
     assert [c["state"] for c in rows["e1"]["cells"]] == ["hours", "hours", "blank"] and rows["e1"]["total"] == 120.0
     assert [c["state"] for c in rows["e2"]["cells"]] == ["dash", "blank", "blank"] and rows["e2"]["total"] is None

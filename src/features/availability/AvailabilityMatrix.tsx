@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import type { AvailabilityMatrix, AvailabilityStatus, MatrixCell } from "../../api/types";
@@ -10,11 +10,13 @@ import {
   fieldClass,
   labelClass,
   TableFrame,
+} from "../../components/ui/primitives";
+import {
   tableClassMatrix,
   tableStickyColClass,
-} from "../../components/ui/primitives";
+} from "../../components/ui/tableClasses";
 import { EM_DASH, hours } from "../../lib/format";
-import { STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
+import { NO_RECORD_FILTER, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
 
 const STATUSES_WITH_REMAINING_HOURS: AvailabilityStatus[] = [
   "Partially Available",
@@ -93,28 +95,91 @@ function CellView({ cell, monthLabel }: { cell: MatrixCell; monthLabel: string }
   );
 }
 
-export function MatrixLegend() {
+const legendItemBase =
+  "inline-flex h-8 touch:h-10 items-center gap-2 rounded-lg border px-2 text-xs transition-[background-color,border-color,box-shadow,opacity] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+
+/**
+ * Key for the matrix. When `selected` and `onToggle` are given, each status becomes a filter toggle
+ * that narrows the matrix to employees with that status in the months in view.
+ */
+export function MatrixLegend({
+  selected,
+  onToggle,
+  onClear,
+}: {
+  selected?: string[];
+  onToggle?: (value: string) => void;
+  onClear?: () => void;
+}) {
+  const interactive = Boolean(onToggle);
+  const anyActive = (selected?.length ?? 0) > 0;
+
+  const item = (value: string, content: ReactNode, muted = false) => {
+    if (!interactive) {
+      return <span className={`flex items-center gap-2 ${muted ? "text-muted" : ""}`}>{content}</span>;
+    }
+    const active = selected?.includes(value) ?? false;
+    return (
+      <button
+        type="button"
+        aria-pressed={active}
+        onClick={() => onToggle?.(value)}
+        className={`${legendItemBase} ${
+          active
+            ? "border-primary bg-surface text-ink shadow-(--shadow-card) ring-1 ring-primary"
+            : `border-transparent hover:border-hairline hover:bg-surface hover:shadow-(--shadow-card) ${
+                anyActive ? "opacity-60 hover:opacity-100" : ""
+              } ${muted ? "text-muted hover:text-ink-soft" : "text-ink-soft"}`
+        }`}
+      >
+        {content}
+      </button>
+    );
+  };
+
   return (
     <div className="rv-inset-panel">
-    <ul aria-label="Legend" className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ink-soft">
-      {STATUS_ORDER.map((status: AvailabilityStatus) => (
-        <li key={status} className="flex items-center gap-2">
-          <StatusChip status={status} />
-          {status}
+      <ul aria-label="Legend" className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 text-xs text-ink-soft">
+        {STATUS_ORDER.map((status: AvailabilityStatus) => (
+          <li key={status}>
+            {item(
+              status,
+              <>
+                <StatusChip status={status} />
+                {status}
+              </>,
+            )}
+          </li>
+        ))}
+        <li>
+          {item(
+            NO_RECORD_FILTER,
+            <>
+              <span aria-hidden="true" className="inline-grid h-5 w-5 place-items-center text-border">
+                {EM_DASH}
+              </span>
+              No record
+            </>,
+            true,
+          )}
         </li>
-      ))}
-      <li className="flex items-center gap-2 text-muted">
-        <span aria-hidden="true" className="inline-grid h-5 w-5 place-items-center text-border">
-          {EM_DASH}
-        </span>
-        No record
-      </li>
-      <li className="flex items-center gap-2 text-muted">
-        <span aria-hidden="true" className="inline-block h-5 w-5 rounded-md border border-hairline bg-surface" />
-        No Project Track data
-      </li>
-      <li className="basis-full text-muted sm:ml-auto sm:basis-auto">Figures show hours remaining</li>
-    </ul>
+        <li className={interactive ? "px-2" : ""}>
+          <span className="flex items-center gap-2 text-muted">
+            <span aria-hidden="true" className="inline-block h-5 w-5 rounded-md border border-hairline bg-surface" />
+            No Project Track data
+          </span>
+        </li>
+        {interactive && anyActive && onClear ? (
+          <li>
+            <button type="button" onClick={onClear} className="h-8 touch:h-10 rounded-lg px-2 text-xs font-medium text-primary hover:underline">
+              Clear status filter
+            </button>
+          </li>
+        ) : null}
+        <li className="basis-full px-2 text-muted sm:ml-auto sm:basis-auto">
+          {interactive ? "Select a status to filter. Figures show hours remaining" : "Figures show hours remaining"}
+        </li>
+      </ul>
     </div>
   );
 }

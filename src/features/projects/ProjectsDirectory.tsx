@@ -6,7 +6,6 @@ import {
   ChevronRight,
   ChevronsUpDown,
   FolderKanban,
-  Search,
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
@@ -27,20 +26,25 @@ import {
   fieldClass,
   labelClass,
   TableFrame,
-  TableNumeric,
-  TableText,
   rowChevronClass,
-  tableBodyId,
+} from "../../components/ui/primitives";
+import {
   tableClassInteractive,
   tableHeadClass,
-  tableRowActionClass,
   tableStickyColClass,
-} from "../../components/ui/primitives";
+} from "../../components/ui/tableClasses";
+import {
+  TableNumeric,
+  TableText,
+  tableBodyId,
+  tableRowActionClass,
+} from "../../components/ui/tableCells";
 import { sortIconClass } from "../../components/ui/tableStyles";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { hours, integer, shortDate } from "../../lib/format";
 import { CONTRACT_ORDER, projectStatusTone } from "../../lib/status";
+import { ProjectSearchCombobox } from "./projectPicker";
 
 const FILTER_KEYS = ["months", "cc", "coverage", "q"] as const;
 const COVERAGE_DEFAULT = "All Projects";
@@ -70,11 +74,6 @@ function compare(a: ProjectRow, b: ProjectRow, key: SortKey): number {
   if (right === null) return -1;
   if (typeof left === "number" && typeof right === "number") return left - right;
   return String(left).localeCompare(String(right), undefined, { sensitivity: "base" });
-}
-
-function shareOf(part: number | undefined, total: number | undefined) {
-  if (part === undefined || !total) return undefined;
-  return `${Math.round((part / total) * 100)}%`;
 }
 
 function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: string) => void }) {
@@ -294,7 +293,7 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
         resetDisabled={activeFilters === 0}
       >
         <div className="@container">
-        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
           <MultiSelect
             label="Reporting month"
             options={(options.data?.months ?? []).map((m) => ({
@@ -317,37 +316,31 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
             options={(options.data?.coverage ?? ["All Projects"]).map((c) => ({ value: c, label: c }))}
             onChange={(value) => url.setValues({ coverage: value === COVERAGE_DEFAULT ? null : value })}
           />
-          <div className="min-w-0">
-            <label htmlFor="project-search" className={labelClass}>
-              Search
-            </label>
-            <div className="relative">
-              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-              <input
-                id="project-search"
-                type="search"
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                className={`${fieldClass} pl-9`}
-                placeholder="Project name, ID or client"
-              />
-            </div>
-          </div>
         </div>
         </div>
       </FilterCard>
 
+      <ProjectSearchCombobox
+        options={options.data?.projects ?? []}
+        search={searchText}
+        onSearchChange={setSearchText}
+        onSelect={onOpen}
+      />
+
       {overview.error ? (
         <ErrorBlock message={overview.error} onRetry={overview.reload} />
       ) : (
-        <SummarySection id="projects-summary-heading" subtitle="Projects matching the current filters">
+        <SummarySection
+          id="projects-summary-heading"
+          subtitle="Totals across the full reporting window. Other filters narrow the project table; reporting month affects row hours only."
+        >
           <div className="@container">
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               label="Total projects"
               icon={FolderKanban}
               value={kpis?.total_projects}
-              caption="Matching the current filters"
+              caption="Full reporting window"
               loading={!kpis}
             />
             <KpiCard
@@ -355,8 +348,6 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
               icon={Activity}
               tone="success"
               value={kpis?.active_projects}
-              emphasis={shareOf(kpis?.active_projects, kpis?.total_projects)}
-              caption={kpis?.total_projects ? "of all projects" : "No projects in view"}
               loading={!kpis}
             />
             <KpiCard
@@ -364,15 +355,13 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
               icon={UserRoundCheck}
               tone="lavender"
               value={kpis?.projects_with_employees}
-              emphasis={shareOf(kpis?.projects_with_employees, kpis?.total_projects)}
-              caption={kpis?.total_projects ? "of all projects" : "No projects in view"}
               loading={!kpis}
             />
             <KpiCard
               label="Employees assigned"
               icon={UsersRound}
               value={kpis?.employees_assigned}
-              caption="Across the projects in view"
+              caption="Full reporting window"
               loading={!kpis}
             />
           </div>
