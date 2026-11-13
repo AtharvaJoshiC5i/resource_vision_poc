@@ -1,6 +1,15 @@
 import { Fragment, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   ArrowLeft,
   CalendarCheck,
@@ -38,14 +47,22 @@ import {
   tableClassProseHeader,
   tableHeadClass,
 } from "../../components/ui/tableClasses";
-import {
-  TableEmpty,
-  TableNumeric,
-} from "../../components/ui/tableCells";
+import { TableEmpty, TableNumeric } from "../../components/ui/tableCells";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
-import { CHART_AXIS, CHART_AXIS_TITLE, CHART_CURSOR, CHART_GRID } from "../../lib/chart";
-import { EM_DASH, compactMonth, hours, shortDate, text } from "../../lib/format";
+import {
+  CHART_AXIS,
+  CHART_AXIS_TITLE,
+  CHART_CURSOR,
+  CHART_GRID,
+} from "../../lib/chart";
+import {
+  EM_DASH,
+  compactMonth,
+  hours,
+  shortDate,
+  text,
+} from "../../lib/format";
 import { STATUS_STYLE, projectStatusTone } from "../../lib/status";
 import { PageZones } from "../../components/layout/pageZones";
 import { EmployeeDirectory } from "./EmployeeDirectory";
@@ -53,7 +70,8 @@ import { resolveDirectoryReportingMonth } from "./directoryMonth";
 
 const AVAILABILITY_CHART_HEIGHT = 220;
 /** Shared scroll region when Projects and Availability sit side by side. */
-const WORK_PANEL_SCROLL = "overflow-x-auto xl:max-h-[min(22rem,42dvh)] xl:overflow-y-auto";
+const WORK_PANEL_SCROLL =
+  "overflow-x-auto xl:max-h-[min(22rem,42dvh)] xl:overflow-y-auto";
 
 function isStatus(value: string | null): value is AvailabilityStatus {
   return value !== null && value in STATUS_STYLE;
@@ -67,7 +85,11 @@ function employeeWindowLabel(months: EmployeeMonthRow[]) {
 
 function StatusCell({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted">{EM_DASH}</span>;
-  return isStatus(status) ? <StatusBadge status={status} /> : <span>{status}</span>;
+  return isStatus(status) ? (
+    <StatusBadge status={status} />
+  ) : (
+    <span>{status}</span>
+  );
 }
 
 /** Overrides default left-aligned headers so numeric columns line up with their cells. */
@@ -84,7 +106,13 @@ const EMPLOYEE_MONTHLY_TABLE = [
 /* ----------------------------------------------------------------------------- availability over time */
 function MonthlyTable({ detail }: { detail: EmployeeDetail }) {
   return (
-    <TableFrame nested tabIndex={0} role="region" aria-label="Monthly allocation and availability" className="mt-0">
+    <TableFrame
+      nested
+      tabIndex={0}
+      role="region"
+      aria-label="Monthly allocation and availability"
+      className="mt-0"
+    >
       <table className={EMPLOYEE_MONTHLY_TABLE}>
         <colgroup>
           <col className="w-[26%]" />
@@ -98,13 +126,25 @@ function MonthlyTable({ detail }: { detail: EmployeeDetail }) {
             <th className={`${tableHeadClass} rv-col-label`} scope="col">
               Month
             </th>
-            <th className={`${tableHeadClass} rv-col-num`} scope="col" title="Planned hours">
+            <th
+              className={`${tableHeadClass} rv-col-num`}
+              scope="col"
+              title="Planned hours"
+            >
               Planned
             </th>
-            <th className={`${tableHeadClass} rv-col-num`} scope="col" title="Hours needing review">
+            <th
+              className={`${tableHeadClass} rv-col-num`}
+              scope="col"
+              title="Hours needing review"
+            >
               Review
             </th>
-            <th className={`${tableHeadClass} rv-col-num`} scope="col" title="Remaining hours">
+            <th
+              className={`${tableHeadClass} rv-col-num`}
+              scope="col"
+              title="Remaining hours"
+            >
               Free
             </th>
             <th className={`${tableHeadClass} rv-col-status`} scope="col">
@@ -130,21 +170,36 @@ function MonthlyTable({ detail }: { detail: EmployeeDetail }) {
                 {compactMonth(m.month)}
               </th>
               <td className="rv-col-num align-middle text-right">
-                <TableNumeric strong={m.planned_hours !== null}>{hours(m.planned_hours)}</TableNumeric>
+                <TableNumeric strong={m.planned_hours !== null}>
+                  {hours(m.planned_hours)}
+                </TableNumeric>
               </td>
               <td className="rv-col-num align-middle text-right">
-                <TableNumeric strong={m.unresolved_hours !== null && m.unresolved_hours > 0}>
+                <TableNumeric
+                  strong={m.unresolved_hours !== null && m.unresolved_hours > 0}
+                >
                   {hours(m.unresolved_hours)}
                 </TableNumeric>
               </td>
               <td className="rv-col-num align-middle text-right">
-                <TableNumeric strong={m.remaining_hours !== null}>{hours(m.remaining_hours)}</TableNumeric>
+                <TableNumeric strong={m.remaining_hours !== null}>
+                  {hours(m.remaining_hours)}
+                </TableNumeric>
               </td>
               <td
                 className="rv-col-status align-middle"
-                title={m.status_reason ?? (m.has_data ? "No record this month" : "No Project Track data for this month")}
+                title={
+                  m.status_reason ??
+                  (m.has_data
+                    ? "No record this month"
+                    : "No Project Track data for this month")
+                }
               >
-                {m.present ? <StatusCell status={m.status} /> : <TableEmpty title="No record this month" />}
+                {m.present ? (
+                  <StatusCell status={m.status} />
+                ) : (
+                  <TableEmpty title="No record this month" />
+                )}
               </td>
             </tr>
           ))}
@@ -156,33 +211,60 @@ function MonthlyTable({ detail }: { detail: EmployeeDetail }) {
 
 const TREND_SERIES = [
   { key: "planned", label: "Planned", fill: "var(--color-primary)" },
-  { key: "unresolved", label: "Needs review", fill: STATUS_STYLE.Unverified.chart },
+  {
+    key: "unresolved",
+    label: "Needs review",
+    fill: STATUS_STYLE.Unverified.chart,
+  },
   { key: "remaining", label: "Remaining", fill: "var(--color-lavender-light)" },
 ] as const;
 
 type TrendKey = (typeof TREND_SERIES)[number]["key"];
-type TrendDatum = { short: string; label: string } & Partial<Record<TrendKey, number>>;
+type TrendDatum = { short: string; label: string } & Partial<
+  Record<TrendKey, number>
+>;
 
-function TrendTooltip({ active, payload }: { active?: boolean; payload?: { payload: TrendDatum }[] }) {
+function TrendTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: { payload: TrendDatum }[];
+}) {
   const row = payload?.[0]?.payload;
   if (!active || !row) return null;
   return (
     <div className="min-w-44 rounded-lg bg-surface px-3 py-2.5 text-xs shadow-(--shadow-popover)">
       <p className="mb-1.5 font-medium text-ink">{row.label}</p>
       {TREND_SERIES.map((s) => (
-        <p key={s.key} className="flex items-center justify-between gap-6 py-0.5">
+        <p
+          key={s.key}
+          className="flex items-center justify-between gap-6 py-0.5"
+        >
           <span className="flex items-center gap-2 text-ink-soft">
-            <span aria-hidden="true" className="h-2 w-2 rounded-sm" style={{ background: s.fill }} />
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-sm"
+              style={{ background: s.fill }}
+            />
             {s.label}
           </span>
-          <span className="font-medium tabular-nums text-ink">{row[s.key] === undefined ? EM_DASH : `${hours(row[s.key])} h`}</span>
+          <span className="font-medium tabular-nums text-ink">
+            {row[s.key] === undefined ? EM_DASH : `${hours(row[s.key])} h`}
+          </span>
         </p>
       ))}
     </div>
   );
 }
 
-function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity: number | undefined }) {
+function TrendChart({
+  months,
+  capacity,
+}: {
+  months: EmployeeMonthRow[];
+  capacity: number | undefined;
+}) {
   const chartMonths = months.filter(
     (m) =>
       m.planned_hours != null ||
@@ -193,8 +275,14 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
     short: compactMonth(m.month),
     label: m.label,
     planned: m.planned_hours ?? undefined,
-    unresolved: m.unresolved_hours !== null && m.unresolved_hours > 0 ? m.unresolved_hours : undefined,
-    remaining: m.remaining_hours !== null && m.remaining_hours > 0 ? m.remaining_hours : undefined,
+    unresolved:
+      m.unresolved_hours !== null && m.unresolved_hours > 0
+        ? m.unresolved_hours
+        : undefined,
+    remaining:
+      m.remaining_hours !== null && m.remaining_hours > 0
+        ? m.remaining_hours
+        : undefined,
   }));
   const totals = TREND_SERIES.map((s) => ({
     ...s,
@@ -205,13 +293,16 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
     <figure aria-label="Allocation trend by month" className="m-0 space-y-3">
       <ul className="flex flex-wrap gap-2">
         {totals.map((s) => (
-          <li
-            key={s.key}
-            className="rv-chip min-w-0 bg-canvas"
-          >
-            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm" style={{ background: s.fill }} />
+          <li key={s.key} className="rv-chip min-w-0 bg-canvas">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 shrink-0 rounded-sm"
+              style={{ background: s.fill }}
+            />
             <span className="text-muted">{s.label}</span>
-            <span className="font-semibold tabular-nums text-ink">{hours(s.total)} h</span>
+            <span className="font-semibold tabular-nums text-ink">
+              {hours(s.total)} h
+            </span>
           </li>
         ))}
       </ul>
@@ -226,7 +317,11 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 4, right: 2, bottom: 0, left: 0 }} barCategoryGap="22%">
+            <BarChart
+              data={data}
+              margin={{ top: 4, right: 2, bottom: 0, left: 0 }}
+              barCategoryGap="22%"
+            >
               <CartesianGrid vertical={false} {...CHART_GRID} />
               <XAxis
                 dataKey="short"
@@ -269,7 +364,11 @@ function TrendChart({ months, capacity }: { months: EmployeeMonthRow[]; capacity
                   label={{
                     value: `Capacity ${capacity} h`,
                     position: "insideTopRight",
-                    style: { ...CHART_AXIS_TITLE, fontSize: 10, fill: "var(--color-muted)" },
+                    style: {
+                      ...CHART_AXIS_TITLE,
+                      fontSize: 10,
+                      fill: "var(--color-muted)",
+                    },
                   }}
                 />
               )}
@@ -342,7 +441,13 @@ function AvailabilityOverTime({
   );
 }
 
-function EmployeeWorkPanel({ detail, capacity }: { detail: EmployeeDetail; capacity: number | undefined }) {
+function EmployeeWorkPanel({
+  detail,
+  capacity,
+}: {
+  detail: EmployeeDetail;
+  capacity: number | undefined;
+}) {
   const windowLabel = employeeWindowLabel(detail.months);
   const projectCount = detail.totals.project_count;
 
@@ -395,12 +500,17 @@ function EffortHours({
   emphasize?: boolean;
 }) {
   const needsReview = unresolved !== null && unresolved > 0;
-  if (planned === null && !needsReview) return <TableEmpty title="No hours recorded" />;
+  if (planned === null && !needsReview)
+    return <TableEmpty title="No hours recorded" />;
   return (
     <span className="inline-block text-right">
-      {planned !== null && <TableNumeric strong={emphasize}>{hours(planned)}</TableNumeric>}
+      {planned !== null && (
+        <TableNumeric strong={emphasize}>{hours(planned)}</TableNumeric>
+      )}
       {needsReview && (
-        <span className="mt-0.5 block text-xs font-medium tabular-nums text-warning-ink">{hours(unresolved)} to review</span>
+        <span className="mt-0.5 block text-xs font-medium tabular-nums text-warning-ink">
+          {hours(unresolved)} to review
+        </span>
       )}
     </span>
   );
@@ -459,14 +569,20 @@ function groupByProject(rows: AllocationRow[]): EmployeeProject[] {
     p.planned = sum(p.months.map((m) => m.planned));
     p.unresolved = sum(p.months.map((m) => m.unresolved));
   }
-  return projects.sort((a, b) => (b.planned ?? 0) - (a.planned ?? 0) || a.name.localeCompare(b.name));
+  return projects.sort(
+    (a, b) =>
+      (b.planned ?? 0) - (a.planned ?? 0) || a.name.localeCompare(b.name),
+  );
 }
 
 function activeRange(p: EmployeeProject) {
   const first = p.months[0];
   const last = p.months[p.months.length - 1];
   const count = p.months.length;
-  const span = first.month === last.month ? compactMonth(first.month) : `${compactMonth(first.month)} to ${compactMonth(last.month)}`;
+  const span =
+    first.month === last.month
+      ? compactMonth(first.month)
+      : `${compactMonth(first.month)} to ${compactMonth(last.month)}`;
   return { span, count: `${count} ${count === 1 ? "month" : "months"}` };
 }
 
@@ -476,7 +592,10 @@ function projectHref(id: string) {
 
 function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
-  const projects = useMemo(() => groupByProject(detail.allocations.rows), [detail.allocations.rows]);
+  const projects = useMemo(
+    () => groupByProject(detail.allocations.rows),
+    [detail.allocations.rows],
+  );
   const toggle = (id: string) =>
     setOpen((prev) => {
       const next = new Set(prev);
@@ -486,24 +605,43 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
     });
 
   if (projects.length === 0) {
-    return <EmptyBlock message="No project allocations recorded in the reporting window" />;
+    return (
+      <EmptyBlock message="No project allocations recorded in the reporting window" />
+    );
   }
 
   return (
-    <TableFrame nested className="min-w-0" role="region" aria-label="Projects for this employee">
+    <TableFrame
+      nested
+      className="min-w-0"
+      role="region"
+      aria-label="Projects for this employee"
+    >
       <table className={`${tableClassProseHeader} min-w-[28rem]`}>
         <thead>
           <tr>
-            <th className={`${tableHeadClass} min-w-[11rem] text-left`} scope="col">
+            <th
+              className={`${tableHeadClass} min-w-[11rem] text-left`}
+              scope="col"
+            >
               Project
             </th>
-            <th className={`${tableHeadClass} min-w-[6.5rem] text-left`} scope="col">
+            <th
+              className={`${tableHeadClass} min-w-[6.5rem] text-left`}
+              scope="col"
+            >
               Status
             </th>
-            <th className={`${tableHeadClass} min-w-[7rem] text-left`} scope="col">
+            <th
+              className={`${tableHeadClass} min-w-[7rem] text-left`}
+              scope="col"
+            >
               Active months
             </th>
-            <th className={`${tableHeadClass} w-[6.5rem] text-right`} scope="col">
+            <th
+              className={`${tableHeadClass} w-[6.5rem] text-right`}
+              scope="col"
+            >
               Planned hours
             </th>
           </tr>
@@ -515,8 +653,13 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
             const range = activeRange(p);
             return (
               <Fragment key={p.id}>
-                <tr className={`text-ink-soft ${expanded ? "rv-table-row--open" : ""}`}>
-                  <th scope="row" className="min-w-[11rem] align-top text-left font-normal">
+                <tr
+                  className={`text-ink-soft ${expanded ? "rv-table-row--open" : ""}`}
+                >
+                  <th
+                    scope="row"
+                    className="min-w-[11rem] align-top text-left font-normal"
+                  >
                     <div className="flex items-start gap-1.5">
                       <button
                         type="button"
@@ -525,7 +668,10 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
                         onClick={() => toggle(p.id)}
                         className="-ml-1 grid h-5 w-5 touch:h-10 touch:w-10 shrink-0 place-items-center rounded text-muted transition-colors hover:bg-canvas hover:text-ink"
                       >
-                        <ChevronRight aria-hidden="true" className={`h-3.5 w-3.5 ${expanded ? "rotate-90" : ""}`} />
+                        <ChevronRight
+                          aria-hidden="true"
+                          className={`h-3.5 w-3.5 ${expanded ? "rotate-90" : ""}`}
+                        />
                       </button>
                       <span className="min-w-0 flex-1">
                         <Link
@@ -552,15 +698,24 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
                       {p.status}
                     </Pill>
                     {p.contract ? (
-                      <span className="mt-1 block break-words text-xs leading-snug text-muted">{p.contract}</span>
+                      <span className="mt-1 block break-words text-xs leading-snug text-muted">
+                        {p.contract}
+                      </span>
                     ) : null}
                   </td>
                   <td className="min-w-[7rem] align-top tabular-nums">
-                    <span className="block break-words leading-snug text-ink-soft">{range.span}</span>
-                    <span className="mt-0.5 block text-xs text-muted">{range.count}</span>
+                    <span className="block break-words leading-snug text-ink-soft">
+                      {range.span}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted">
+                      {range.count}
+                    </span>
                   </td>
                   <td className="w-[6.5rem] align-top text-right tabular-nums">
-                    <EffortHours planned={p.planned} unresolved={p.unresolved} />
+                    <EffortHours
+                      planned={p.planned}
+                      unresolved={p.unresolved}
+                    />
                   </td>
                 </tr>
                 {expanded &&
@@ -569,27 +724,45 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
                       <tr className="rv-table-row--nested">
                         <td colSpan={3} className="py-2 pl-8 pr-3">
                           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-l border-border pl-3">
-                            <span className="shrink-0 font-medium text-ink">{m.label}</span>
+                            <span className="shrink-0 font-medium text-ink">
+                              {m.label}
+                            </span>
                             {m.children.length === 1 && (
-                              <span className="break-words text-xs text-muted">{m.children[0].sub_project}</span>
+                              <span className="break-words text-xs text-muted">
+                                {m.children[0].sub_project}
+                              </span>
                             )}
                             {m.children.length > 1 && (
-                              <span className="text-xs text-muted">{m.children.length} sub-projects</span>
+                              <span className="text-xs text-muted">
+                                {m.children.length} sub-projects
+                              </span>
                             )}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">
-                          <EffortHours planned={m.planned} unresolved={m.unresolved} />
+                          <EffortHours
+                            planned={m.planned}
+                            unresolved={m.unresolved}
+                          />
                         </td>
                       </tr>
                       {m.children.length > 1 &&
                         m.children.map((child) => (
-                          <tr key={`${p.id}-${m.month}-${child.sub_project}`} className="rv-table-row--nested">
+                          <tr
+                            key={`${p.id}-${m.month}-${child.sub_project}`}
+                            className="rv-table-row--nested"
+                          >
                             <td colSpan={3} className="py-1.5 pl-14 pr-3">
-                              <span className="block break-words text-ink-soft">{child.sub_project}</span>
+                              <span className="block break-words text-ink-soft">
+                                {child.sub_project}
+                              </span>
                             </td>
                             <td className="px-3 py-1.5 text-right tabular-nums">
-                              <EffortHours planned={child.planned_hours} unresolved={child.unresolved_hours} emphasize={false} />
+                              <EffortHours
+                                planned={child.planned_hours}
+                                unresolved={child.unresolved_hours}
+                                emphasize={false}
+                              />
                             </td>
                           </tr>
                         ))}
@@ -605,11 +778,19 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
 }
 
 /* ----------------------------------------------------------------------------- profile header */
-function ProfileDetailField({ label, value }: { label: string; value: ReactNode }) {
+function ProfileDetailField({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas/40 px-3 py-2.5">
       <dt className="text-xs text-muted">{label}</dt>
-      <dd className="mt-1 break-words text-[13px] font-medium leading-snug text-ink">{value}</dd>
+      <dd className="mt-1 break-words text-[13px] font-medium leading-snug text-ink">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -618,11 +799,18 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
   const { profile, months, totals } = detail;
   const matched = profile.hr_match_status === "Matched to ZingHR";
   const windowLabel = employeeWindowLabel(months);
-  const totalsStatus = totals.status && isStatus(totals.status) ? totals.status : undefined;
+  const totalsStatus =
+    totals.status && isStatus(totals.status) ? totals.status : undefined;
   const reviewHours =
-    totals.unresolved_hours !== null && totals.unresolved_hours > 0 ? totals.unresolved_hours : null;
+    totals.unresolved_hours !== null && totals.unresolved_hours > 0
+      ? totals.unresolved_hours
+      : null;
   const monthsWithRecords = months.filter((m) => m.present).length;
-  const metaLine = [profile.primary_capability, profile.grade, profile.location].filter(Boolean);
+  const metaLine = [
+    profile.primary_capability,
+    profile.grade,
+    profile.location,
+  ].filter(Boolean);
 
   return (
     <section
@@ -639,11 +827,16 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
               {profile.initials}
             </div>
             <div className="min-w-0 flex-1">
-              <h1 id="employee-profile-heading" className="break-words text-lg font-medium tracking-tight text-ink sm:text-xl">
+              <h1
+                id="employee-profile-heading"
+                className="break-words text-lg font-medium tracking-tight text-ink sm:text-xl"
+              >
                 {profile.name}
               </h1>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
-                <span className="tabular-nums font-medium text-ink-soft">{profile.code}</span>
+                <span className="tabular-nums font-medium text-ink-soft">
+                  {profile.code}
+                </span>
                 {metaLine.map((part) => (
                   <Fragment key={part}>
                     <span aria-hidden="true" className="text-hairline">
@@ -656,7 +849,10 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {profile.status && (
                   <span className="rv-chip h-6 gap-1.5 text-ink-soft">
-                    <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-success" />
+                    <span
+                      aria-hidden="true"
+                      className="h-1.5 w-1.5 rounded-full bg-success"
+                    />
                     {profile.status}
                   </span>
                 )}
@@ -679,31 +875,63 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
 
       <div className="border-b border-hairline px-5 py-4 sm:px-6">
         <h2 className="text-base font-medium text-ink">Employee information</h2>
-        <p className="mt-0.5 text-[12px] text-muted">HR master data and contract context for the reporting window</p>
+        <p className="mt-0.5 text-[12px] text-muted">
+          HR master data and contract context for the reporting window
+        </p>
         <div className="mt-4 grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div>
             <h3 className="rv-eyebrow">Role and organisation</h3>
             <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <ProfileDetailField label="Grade" value={text(profile.grade)} />
-              <ProfileDetailField label="Primary capability" value={text(profile.primary_capability)} />
-              <ProfileDetailField label="Secondary capability" value={text(profile.secondary_capability)} />
-              <ProfileDetailField label="Division" value={text(profile.division)} />
-              <ProfileDetailField label="Department" value={text(profile.department)} />
-              <ProfileDetailField label="Reporting manager" value={text(profile.manager)} />
+              <ProfileDetailField
+                label="Primary capability"
+                value={text(profile.primary_capability)}
+              />
+              <ProfileDetailField
+                label="Secondary capability"
+                value={text(profile.secondary_capability)}
+              />
+              <ProfileDetailField
+                label="Division"
+                value={text(profile.division)}
+              />
+              <ProfileDetailField
+                label="Department"
+                value={text(profile.department)}
+              />
+              <ProfileDetailField
+                label="Reporting manager"
+                value={text(profile.manager)}
+              />
             </dl>
           </div>
           <div>
             <h3 className="rv-eyebrow">Contact and employment</h3>
             <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <ProfileDetailField label="Location" value={text(profile.location)} />
-              <ProfileDetailField label="Country" value={text(profile.country)} />
-              <ProfileDetailField label="Employment type" value={text(profile.employment_type)} />
-              <ProfileDetailField label="Date of joining" value={shortDate(profile.joining_date)} />
+              <ProfileDetailField
+                label="Location"
+                value={text(profile.location)}
+              />
+              <ProfileDetailField
+                label="Country"
+                value={text(profile.country)}
+              />
+              <ProfileDetailField
+                label="Employment type"
+                value={text(profile.employment_type)}
+              />
+              <ProfileDetailField
+                label="Date of joining"
+                value={shortDate(profile.joining_date)}
+              />
               <ProfileDetailField
                 label="Email"
                 value={
                   profile.email ? (
-                    <a href={`mailto:${profile.email}`} className="break-all text-primary hover:text-purple-indigo hover:underline">
+                    <a
+                      href={`mailto:${profile.email}`}
+                      className="break-all text-primary hover:text-purple-indigo hover:underline"
+                    >
                       {profile.email}
                     </a>
                   ) : (
@@ -711,7 +939,10 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
                   )
                 }
               />
-              <ProfileDetailField label="Contract category" value={text(totals.contract_category || null)} />
+              <ProfileDetailField
+                label="Contract category"
+                value={text(totals.contract_category || null)}
+              />
             </dl>
           </div>
         </div>
@@ -721,7 +952,9 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
         <h2 id="emp-kpi-heading" className="text-base font-medium text-ink">
           Availability across the window
         </h2>
-        <p className="mt-0.5 text-[12px] text-muted">Window totals for {windowLabel}</p>
+        <p className="mt-0.5 text-[12px] text-muted">
+          Window totals for {windowLabel}
+        </p>
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard
             label="Months with records"
@@ -742,7 +975,11 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
           <KpiCard
             label="Planned hours"
             icon={Clock}
-            value={totals.planned_hours !== null ? hours(totals.planned_hours) : EM_DASH}
+            value={
+              totals.planned_hours !== null
+                ? hours(totals.planned_hours)
+                : EM_DASH
+            }
             unit="h"
             caption="Verified effort across the window"
           />
@@ -753,7 +990,11 @@ function EmployeeProfileOverview({ detail }: { detail: EmployeeDetail }) {
             tone="success"
             value={reviewHours !== null ? hours(reviewHours) : EM_DASH}
             unit="h"
-            caption={reviewHours !== null ? "Not counted as verified" : "Nothing to review"}
+            caption={
+              reviewHours !== null
+                ? "Not counted as verified"
+                : "Nothing to review"
+            }
           />
         </div>
       </div>
@@ -767,11 +1008,17 @@ export function EmployeePage() {
   const selected = url.getOne("emp");
 
   const meta = useApi<Meta>("/meta");
-  const detail = useApi<EmployeeDetail>(selected ? `/employees/${encodeURIComponent(selected)}` : null);
+  const detail = useApi<EmployeeDetail>(
+    selected ? `/employees/${encodeURIComponent(selected)}` : null,
+  );
   const profile = detail.data?.profile;
   const monthParam = url.getOne("month");
 
-  const listReportingKey = resolveDirectoryReportingMonth(meta.data?.window ?? [], monthParam, meta.data?.today);
+  const listReportingKey = resolveDirectoryReportingMonth(
+    meta.data?.window ?? [],
+    monthParam,
+    meta.data?.today,
+  );
   const listMonthLabel = listReportingKey
     ? meta.data?.window.find((m) => m.key === listReportingKey)?.label
     : undefined;
@@ -803,14 +1050,21 @@ export function EmployeePage() {
         All employees
       </button>
 
-      {detail.error && <ErrorBlock message={detail.error} onRetry={detail.reload} />}
-      {!detail.error && !detail.data && <LoadingBlock height={420} label="Loading employee" />}
+      {detail.error && (
+        <ErrorBlock message={detail.error} onRetry={detail.reload} />
+      )}
+      {!detail.error && !detail.data && (
+        <LoadingBlock height={420} label="Loading employee" />
+      )}
 
       {detail.data && !detail.error && profile && (
         <>
           <EmployeeProfileOverview detail={detail.data} />
 
-          <EmployeeWorkPanel detail={detail.data} capacity={meta.data?.capacity_hours} />
+          <EmployeeWorkPanel
+            detail={detail.data}
+            capacity={meta.data?.capacity_hours}
+          />
         </>
       )}
     </PageZones>
