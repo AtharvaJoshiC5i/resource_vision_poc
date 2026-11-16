@@ -56,6 +56,23 @@ SELECT
     email                 = dbo.rv_Clean(Email),
     manager_name          = dbo.rv_Clean(ReportingManagerName),
     manager_code          = dbo.rv_Clean(ReportingManagerCode),
-    employment_type       = dbo.rv_Clean(EmploymentType)
+    employment_type       = dbo.rv_Clean(EmploymentType),
+    business_vertical     = dbo.rv_Clean([Business Vertical])
 FROM dbo.zinghr_employee_master
+"""
+
+# Small supplementary reads for the precomputed (rv2) path: profile tags that are not stored in
+# the rv2 tables. Read once per snapshot reload; they never affect hours, capacity or status.
+HR_BUSINESS_VERTICAL = """
+SELECT employee_key = dbo.rv_Key(EmployeeCode), business_vertical = dbo.rv_Clean([Business Vertical])
+FROM dbo.zinghr_employee_master
+WHERE dbo.rv_Key(EmployeeCode) IS NOT NULL
+"""
+
+PROJECT_CLIENTS = """
+SELECT project_id = dbo.rv_Blank(project_id),
+       client     = COALESCE(dbo.rv_Clean(parent_account_name), dbo.rv_Clean(account_name)),
+       row_id     = dbo.rv_Blank(row_id)
+FROM dbo.project_track_proposals_table
+WHERE dbo.rv_Blank(project_id) IS NOT NULL
 """

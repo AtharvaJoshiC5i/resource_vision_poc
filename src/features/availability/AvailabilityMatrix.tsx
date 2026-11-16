@@ -9,14 +9,18 @@ import {
   buttonClass,
   fieldClass,
   labelClass,
-  TableFrame,
 } from "../../components/ui/primitives";
+import { TableScroll } from "../../components/ui/TableCard";
+import { Tooltip } from "../../components/ui/Tooltip";
 import {
   tableClassMatrix,
+  tableHeadClass,
+  tableHeadLabelClass,
   tableStickyColClass,
 } from "../../components/ui/tableClasses";
-import { EM_DASH, hours } from "../../lib/format";
+import { EMPTY, hours } from "../../lib/format";
 import { NO_RECORD_FILTER, STATUS_ORDER, STATUS_STYLE } from "../../lib/status";
+import { TENURE_HINT, clientSummary } from "../../lib/tags";
 
 const STATUSES_WITH_REMAINING_HOURS: AvailabilityStatus[] = [
   "Partially Available",
@@ -30,7 +34,7 @@ const MATRIX_TABLE_CLASS = [
   tableClassMatrix,
   "min-w-full",
   "[&_thead_th.rv-table-sticky-col]:text-left",
-  "[&_tbody_th.rv-table-sticky-col]:text-left [&_tbody_th.rv-table-sticky-col]:align-top [&_tbody_th.rv-table-sticky-col]:py-2.5",
+  "[&_tbody_th.rv-table-sticky-col]:text-left",
 ].join(" ");
 
 function employeeInitials(name: string) {
@@ -41,28 +45,64 @@ function employeeInitials(name: string) {
 }
 
 function MatrixEmployeeIdentity({ row }: { row: MatrixRow }) {
+  const badges = (
+    <>
+      {row.tenure === "Fresher" ? <TenureBadge /> : null}
+      {!row.hr_match ? <HrMatchFlag className="max-w-full" /> : null}
+    </>
+  );
+
   return (
-    <div className="flex min-w-0 max-w-[14rem] items-start gap-2.5 lg:max-w-[16rem]">
-      <span
-        aria-hidden="true"
-        className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-canvas text-[11px] font-medium leading-none text-purple-indigo ring-1 ring-inset ring-hairline"
-      >
-        {employeeInitials(row.name)}
-      </span>
-      <div className="min-w-0 flex-1">
-        <Link
-          to={`/employee?emp=${encodeURIComponent(row.key)}`}
-          title={`Open ${row.name} in Employee 360`}
-          className="block truncate text-sm font-medium text-ink transition-colors hover:text-primary"
-        >
-          {row.name}
-        </Link>
-        <div className="mt-1 flex flex-col items-start gap-1">
-          <span className="text-xs font-medium tabular-nums text-muted">{row.code}</span>
-          {!row.hr_match ? <HrMatchFlag /> : null}
+    <div className="rv-matrix-employee min-w-0 max-w-full overflow-hidden">
+      <div className="flex min-w-0 items-start gap-2">
+        <span aria-hidden="true" className="rv-avatar mt-0.5">
+          {employeeInitials(row.name)}
+        </span>
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <Tooltip content={`Open ${row.name} in Employee 360`}>
+            <Link
+              to={`/employee?emp=${encodeURIComponent(row.key)}`}
+              className="rv-matrix-employee__name block text-[13px] font-medium leading-[1.35] text-ink transition-colors hover:text-primary"
+            >
+              {row.name}
+            </Link>
+          </Tooltip>
+          <p className="mt-0.5 truncate text-xs leading-4 tabular-nums text-muted" title={row.code}>
+            {row.code}
+          </p>
+          {row.business_vertical ? (
+            <Tooltip content={`Business vertical: ${row.business_vertical}`}>
+              <p className="mt-0.5 truncate text-xs leading-4 text-muted">{row.business_vertical}</p>
+            </Tooltip>
+          ) : null}
+          {row.tenure === "Fresher" || !row.hr_match ? (
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">{badges}</div>
+          ) : null}
         </div>
       </div>
     </div>
+  );
+}
+
+function TenureBadge() {
+  return (
+    <Tooltip content={`Fresher: ${TENURE_HINT.Fresher}`}>
+      <span className="shrink-0 rounded bg-primary-soft/80 px-1 text-[10px] font-medium leading-4 text-purple-indigo">
+        Fresher
+      </span>
+    </Tooltip>
+  );
+}
+
+function ClientCell({ clients }: { clients: string[] }) {
+  const summary = clientSummary(clients);
+  if (!summary) {
+    return <span className="text-xs text-muted">{EMPTY}</span>;
+  }
+  return (
+    <Tooltip content={summary.full}>
+      <span className="block max-w-[10rem] truncate text-xs text-ink-soft">{summary.short}</span>
+    </Tooltip>
   );
 }
 
@@ -72,9 +112,11 @@ function CellView({ cell, monthLabel }: { cell: MatrixCell; monthLabel: string }
   }
   if (cell.state === "none") {
     return (
-      <span className="text-border" title="No Project Track record (not zero, not available)" aria-label={`${monthLabel}: no record`}>
-        {EM_DASH}
-      </span>
+      <Tooltip content="No Project Track record (not zero, not available)">
+        <span className="rv-status-tile rv-status-tile--empty" aria-label={`${monthLabel}: no record`}>
+          {EMPTY}
+        </span>
+      </Tooltip>
     );
   }
   const style = STATUS_STYLE[cell.status];
@@ -83,15 +125,18 @@ function CellView({ cell, monthLabel }: { cell: MatrixCell; monthLabel: string }
   const showRemaining =
     STATUSES_WITH_REMAINING_HOURS.includes(cell.status) && cell.remaining_hours !== null;
   return (
-    <span
-      className="rv-chip h-7 min-w-14 justify-center gap-1 px-1.5 tabular-nums"
-      style={{ backgroundColor: style.bg, color: style.fg }}
-      title={`${cell.status}: ${detail}`}
-      aria-label={`${monthLabel}: ${cell.status}, ${detail}`}
-    >
-      <span aria-hidden={showRemaining ? undefined : true}>{style.letter}</span>
-      {showRemaining ? <span className="text-xs">{hours(cell.remaining_hours)}</span> : null}
-    </span>
+    <Tooltip content={`${cell.status}: ${detail}`}>
+      <span
+        className="rv-status-tile"
+        style={{ backgroundColor: style.bg, color: style.fg }}
+        aria-label={`${monthLabel}: ${cell.status}, ${detail}`}
+      >
+      <span className="rv-status-tile__letter" aria-hidden={showRemaining ? undefined : true}>
+        {style.letter}
+      </span>
+      {showRemaining ? <span className="rv-status-tile__value">{hours(cell.remaining_hours)}</span> : null}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -126,8 +171,8 @@ export function MatrixLegend({
         onClick={() => onToggle?.(value)}
         className={`${legendItemBase} ${
           active
-            ? "border-primary bg-surface text-ink shadow-(--shadow-card) ring-1 ring-primary"
-            : `border-transparent hover:border-hairline hover:bg-surface hover:shadow-(--shadow-card) ${
+            ? "border-primary/45 bg-primary-soft font-medium text-ink shadow-(--shadow-control)"
+            : `border-transparent hover:border-card-border hover:bg-surface hover:shadow-(--shadow-control) ${
                 anyActive ? "opacity-60 hover:opacity-100" : ""
               } ${muted ? "text-muted hover:text-ink-soft" : "text-ink-soft"}`
         }`}
@@ -138,7 +183,7 @@ export function MatrixLegend({
   };
 
   return (
-    <div className="rv-inset-panel">
+    <div>
       <ul aria-label="Legend" className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5 text-xs text-ink-soft">
         {STATUS_ORDER.map((status: AvailabilityStatus) => (
           <li key={status}>
@@ -156,7 +201,7 @@ export function MatrixLegend({
             NO_RECORD_FILTER,
             <>
               <span aria-hidden="true" className="inline-grid h-5 w-5 place-items-center text-border">
-                {EM_DASH}
+                {EMPTY}
               </span>
               No record
             </>,
@@ -171,7 +216,7 @@ export function MatrixLegend({
         </li>
         {interactive && anyActive && onClear ? (
           <li>
-            <button type="button" onClick={onClear} className="h-8 touch:h-10 rounded-lg px-2 text-xs font-medium text-primary hover:underline">
+            <button type="button" onClick={onClear} className="h-8 touch:h-10 rounded-lg px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary-soft">
               Clear status filter
             </button>
           </li>
@@ -207,10 +252,10 @@ function MatrixMonthList({ matrix, month }: { matrix: AvailabilityMatrix; month:
   return (
     <ul
       aria-label={`Allocation status in ${label}`}
-      className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-surface shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]"
+      className="divide-y divide-hairline"
     >
       {matrix.rows.map((row) => (
-        <li key={row.key} className="flex items-start justify-between gap-3 px-3 py-3">
+        <li key={row.key} className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
             <MatrixEmployeeIdentity row={row} />
           </div>
@@ -237,7 +282,7 @@ export function AvailabilityMatrixView({ matrix }: { matrix: AvailabilityMatrix 
 
   return (
     <>
-      <div className="mb-3 flex items-end gap-2 md:hidden">
+      <div className="flex items-end gap-2 border-b border-hairline px-4 py-3 md:hidden">
         {!showFull && (
           <div className="min-w-0 flex-1">
             <label htmlFor={selectId} className={labelClass}>
@@ -277,39 +322,61 @@ export function AvailabilityMatrixView({ matrix }: { matrix: AvailabilityMatrix 
   );
 }
 
+function currentMonthKey() {
+  const now = new Date();
+  return now.getFullYear() * 100 + now.getMonth() + 1;
+}
+
 export function AvailabilityMatrixTable({ matrix }: { matrix: AvailabilityMatrix }) {
+  const current = currentMonthKey();
   return (
-    <TableFrame
-      className="max-h-[min(560px,70dvh)]"
-      tabIndex={0}
-      role="region"
-      aria-label="Employee allocation matrix"
-    >
+    <TableScroll className="max-h-[min(600px,72dvh)]" label="Employee allocation matrix">
       <table className={MATRIX_TABLE_CLASS}>
         <thead>
           <tr>
-            <th scope="col" className={`${tableStickyColClass} min-w-[12.5rem] text-left lg:min-w-[15rem]`}>
-              Employee
+            <th
+              scope="col"
+              className={`${tableHeadClass} ${tableStickyColClass} rv-table-employee-col min-w-[12.5rem] text-left lg:min-w-[14.5rem]`}
+            >
+              <span className={tableHeadLabelClass}>Employee</span>
             </th>
-            {matrix.months.map((month) => (
-              <th
-                key={month.key}
-                scope="col"
-                className="min-w-[4.5rem]"
-              >
-                {month.label}
-              </th>
-            ))}
+            <th scope="col" className={`${tableHeadClass} min-w-[8rem] text-left`}>
+              <Tooltip content="Clients this employee is allocated to in the current month">
+                <span className={tableHeadLabelClass}>Current client</span>
+              </Tooltip>
+            </th>
+            {matrix.months.map((month) => {
+              const [monthName, yearPart] = month.label.split(" ");
+              const hint = month.key === current ? `${month.label} (current month)` : month.label;
+              return (
+                <th
+                  key={month.key}
+                  scope="col"
+                  aria-current={month.key === current ? "date" : undefined}
+                  className={`${tableHeadClass} min-w-[4.5rem] text-center ${month.key === current ? "rv-table-col--current" : ""}`}
+                >
+                  <Tooltip content={hint}>
+                    <span className="rv-table-head-stack">
+                      <span className="rv-table-head-stack__primary">{monthName}</span>
+                      {yearPart ? <span className="rv-table-head-stack__secondary">{yearPart}</span> : null}
+                    </span>
+                  </Tooltip>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {matrix.rows.map((row) => (
             <tr key={row.key} className="group">
-              <th scope="row" className={tableStickyColClass}>
+              <th scope="row" className={`${tableStickyColClass} rv-table-employee-col`}>
                 <MatrixEmployeeIdentity row={row} />
               </th>
+              <td className="text-left">
+                <ClientCell clients={row.clients} />
+              </td>
               {row.cells.map((cell, index) => (
-                <td key={cell.month}>
+                <td key={cell.month} className={cell.month === current ? "rv-table-col--current" : undefined}>
                   <CellView cell={cell} monthLabel={matrix.months[index].label} />
                 </td>
               ))}
@@ -317,6 +384,6 @@ export function AvailabilityMatrixTable({ matrix }: { matrix: AvailabilityMatrix
           ))}
         </tbody>
       </table>
-    </TableFrame>
+    </TableScroll>
   );
 }

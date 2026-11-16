@@ -10,7 +10,7 @@ All values are computed live by parameterised, read-only SQL. No derived tb_* ta
 |---|----------|
 | D1 | Capacity is **176 h** for every employed employee-month (config constant; `rv_CapacityRule` is empty). Partial months also get 176. |
 | D2 | **Window** = current month + next 18 months (19 months), computed from the server date. Months with no PT rows at all render **blank** and fill in when data arrives. |
-| D3 | An employee-month whose PT rows are all zero-effort placeholders is **Unverified** ("effort marked 0"). |
+| D3 | (v2) Explicit zero effort is a valid value. An employee-month whose PT rows are all zero (none unresolved) has 0 planned hours and is **Fully Available** with 176 h remaining, if identity is reliable. A month with no PT row stays **No record**. |
 | D4 | `included_default` is **not used anywhere**. |
 | D5 | "Active Projects" is **date-based**: project start <= today <= end. |
 | D6 | Slicers are multi-select; default = everything in the window. |
@@ -42,13 +42,13 @@ Per (employee, month): `Capacity = 176` if HR-matched and employed, else NULL.
 * `NamedRows` = all named rows; `ProjectCount` = distinct project_id over all named rows (catalog).
 * `ValidRows`, `PlaceholderRows`, `UnresolvedRows`.
 * `VerifiedHours` = SUM(Effort of Valid rows). `UnresolvedHours` = SUM(Effort of Unresolved rows).
-* `Planned` = `VerifiedHours` if `UnresolvedRows = 0` AND `ValidRows > 0` AND HR-matched, else NULL.
+* `Planned` = `VerifiedHours` if `UnresolvedRows = 0` AND HR-matched, else NULL. An explicit zero is valid: months whose rows are all zero-effort (none unresolved) have `VerifiedHours = 0`, not NULL.
 * `Remaining` = `Capacity - Planned` when both non-null, else NULL.
 * **Status** (first match):
-  1. Capacity NULL or Planned NULL -> **Unverified**
+  1. Capacity NULL or Planned NULL (no HR match, invalid HR dates, or unresolved rows) -> **Unverified**
   2. ROUND(Remaining,6) < 0 -> **Over-allocated**
   3. ROUND(Remaining,6) = 0 -> **Fully Committed**
-  4. ROUND(Planned,6) = 0 -> **Fully Available** (reachable only for a verified 0 h month; none exists today)
+  4. ROUND(Planned,6) = 0 -> **Fully Available** (an explicit zero-effort month, or placeholders only)
   5. else **Partially Available**
 * **Contract category** over ALL named rows of the employee-month, from the normalised contract text
   (lower-case, remove spaces, en/em dash -> '-'): `t&m-fte` = FTE; `t&m-hrs`, `output-effortbased`,
@@ -105,3 +105,14 @@ Unresolved rows by reason, Missing HR match employees, rows before joining month
 Independent recomputation in Python on a snapshot and invariants (status counts add up; project totals equal
 sum of rows); parity with `tb_FactEmployeeMonthCapacity` for the fields that do not depend on D1, D3 or D4:
 `NamedAllocationRows`, `RawPlannedHours`, `ProjectCount`, `ContractCategory`.
+
+## Profile tags and filters (Business Vertical, tenure, client)
+
+These tags only narrow which employees are shown. They never change capacity, planned hours, remaining hours or status.
+
+- **Business Vertical**: ZingHR `Business Vertical`, matched on the cleaned employee code (duplicate HR codes are dropped, like the HR match). Employees without an HR record have no vertical and drop out when the filter is set.
+- **Tenure**: completed months between ZingHR `DateOfJoining` and today. 0 to 18 months is **Fresher**, more than 18 is **Lateral**. No HR record, no joining date, or a joining date in the future is **Unknown**. Example: joined 10 Jan 2026, today 5 Nov 2026, so 9 months, Fresher. This is tenure at the company, not prior experience.
+- **Client**: per project, `parent_account_name`, else `account_name`, from the first row (by row id) that has one. An employee's *current* clients are the clients of their allocation rows in the current month. The client filter keeps employees allocated to that client in any in-scope month of the window.
+- **Utilization by account** (Projects page): verified planned hours per client over the selected months, the distinct employees with any row for that client, and each client's share of the table's planned hours. Rows count only in months that are in scope for the employee (as the matrix does). Planned, not actual, hours.
+
+In the precomputed (`azure`) mode the vertical and client are read straight from the two source tables at each snapshot reload, so no `rv2_*` schema change or refresh is needed.

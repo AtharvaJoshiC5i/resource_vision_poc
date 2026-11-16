@@ -62,7 +62,7 @@ def fetch_table(
     active_settings = settings or get_settings()
     max_rows = active_settings.azure_sql_max_rows
 
-    # Table names are fixed constants — not user input.
+    # Table names are fixed constants: not user input.
     allowed_tables = {
         "dbo.famstack_billable",
         "dbo.famstack_non_billable",

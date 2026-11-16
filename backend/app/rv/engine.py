@@ -77,7 +77,7 @@ def _blank_null(value: Any) -> str | None:
 
 def contract_class(contract_type: str | None) -> str:
     text = (contract_type or "").lower()
-    for dash in ("–", "—"):
+    for dash in (chr(0x2013), chr(0x2014)):  # en and em dashes that appear in the source text
         text = text.replace(dash, "-")
     text = text.replace(" ", "").replace(" ", "")
     if text == "t&m-fte":
@@ -214,6 +214,7 @@ class Employee:
     manager_name: str | None
     manager_code: str | None
     employment_type: str | None
+    business_vertical: str | None = None
 
     @property
     def hr_match_status(self) -> str:
@@ -297,6 +298,7 @@ def build_employees(hr_rows: list[dict[str, Any]], rows: list[PtRow]) -> dict[st
             manager_name=(hr or {}).get("manager_name"),
             manager_code=(hr or {}).get("manager_code"),
             employment_type=(hr or {}).get("employment_type"),
+            business_vertical=(hr or {}).get("business_vertical"),
         )
     return employees
 
@@ -322,6 +324,30 @@ def _lookup(key: str, rows: list[PtRow]) -> dict[str, str | None]:
     ):
         result[attr] = next((r.raw[attr] for r in real if r.raw.get(attr)), None)
     return result
+
+
+FRESHER_MAX_MONTHS = 18  # 0 to 18 completed months since joining is Fresher, above that Lateral
+FRESHER = "Fresher"
+LATERAL = "Lateral"
+TENURE_UNKNOWN = "Unknown"
+TENURE_BANDS = (FRESHER, LATERAL, TENURE_UNKNOWN)
+
+
+def tenure_months(joining: date | None, today: date) -> int | None:
+    """Completed months between the date of joining and today (None if unknown or in the future)."""
+    if joining is None or joining > today:
+        return None
+    months = (today.year - joining.year) * 12 + (today.month - joining.month)
+    if today.day < joining.day:
+        months -= 1
+    return max(months, 0)
+
+
+def tenure_band(joining: date | None, today: date) -> str:
+    months = tenure_months(joining, today)
+    if months is None:
+        return TENURE_UNKNOWN
+    return FRESHER if months <= FRESHER_MAX_MONTHS else LATERAL
 
 
 # --------------------------------------------------------------------------- employee-month fact
@@ -376,12 +402,15 @@ def build_employee_months(
         unresolved = [r for r in group if r.status == UNRESOLVED]
 
         capacity = capacity_hours if emp.hr_matched and emp.dates_valid else None
-        verified = sum(r.effort for r in valid) if valid else None
+        # An explicit zero is a valid value, never a missing one: a month whose rows are all zero-effort
+        # placeholders (and none unresolved) has verified hours of exactly 0. A month with no row at
+        # all never reaches this point; it stays "No record".
+        verified = sum(r.effort for r in valid) if valid else (0.0 if not unresolved else None)
         unresolved_vals = [r.effort for r in unresolved if r.effort is not None]
         unresolved_hours = sum(unresolved_vals) if unresolved_vals else None
         raw_hours = sum(r.effort for r in group if r.effort is not None)
 
-        planned = verified if (not unresolved and valid and emp.hr_matched) else None
+        planned = verified if (not unresolved and emp.hr_matched) else None
         remaining = capacity - planned if capacity is not None and planned is not None else None
 
         if capacity is None or planned is None:
@@ -390,12 +419,14 @@ def build_employee_months(
                 reason = "Missing HR match: capacity not established"
             elif capacity is None:
                 reason = "Employment dates invalid: capacity not established"
-            elif unresolved:
-                reason = f"{len(unresolved)} record(s) need review"
             else:
-                reason = "Only zero-effort records: effort marked 0, not verified"
+                reason = f"{len(unresolved)} record(s) need review"
         else:
-            reason = "Capacity and allocation resolved"
+            reason = (
+                "Zero planned effort recorded: full capacity available"
+                if round(planned, 6) == 0
+                else "Capacity and allocation resolved"
+            )
             rounded_remaining = round(remaining, 6)
             if rounded_remaining < 0:
                 status = OVER_ALLOCATED
@@ -441,6 +472,7 @@ class Project:
     start: date | None
     end: date | None
     description: str
+    client: str | None = None
 
     @property
     def search_label(self) -> str:
@@ -494,6 +526,7 @@ def build_projects(pt_rows: list[dict[str, Any]]) -> dict[str, Project]:
             start=min(starts) if starts else None,
             end=max(ends) if ends else None,
             description=first("notes") or NOT_AVAILABLE,
+            client=client,
         )
     return projects
 

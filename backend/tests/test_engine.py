@@ -91,11 +91,48 @@ def test_two_rows_sum():
     assert m.planned == 100.0 and m.project_count == 2 and m.remaining == 76.0
 
 
-def test_placeholder_only_is_unverified():
+def test_explicit_zero_effort_is_fully_available_with_full_capacity():
     s = snap([pt("e1", 202611, 0.0)], [hr("e1")])
     m = em(s, "e1", 202611)
-    assert m.status == e.UNVERIFIED and m.planned is None and m.remaining is None
-    assert m.placeholder_rows == 1 and "zero" in m.status_reason.lower()
+    assert m.status == e.FULLY_AVAILABLE and m.planned == 0.0 and m.remaining == 176.0
+    assert m.verified_hours == 0.0 and m.placeholder_rows == 1 and "zero" in m.status_reason.lower()
+
+
+def test_zero_rows_on_several_projects_stay_fully_available():
+    rows = [pt("e1", 202611, 0.0, project="P1"), pt("e1", 202611, 0.0, project="P2")]
+    m = em(snap(rows, [hr("e1")]), "e1", 202611)
+    assert m.status == e.FULLY_AVAILABLE and m.remaining == 176.0 and m.project_count == 2
+
+
+def test_zero_with_unresolved_row_is_still_unverified():
+    rows = [pt("e1", 202611, 0.0, project="P1"), pt("e1", 202611, -5.0, project="P2")]
+    m = em(snap(rows, [hr("e1")]), "e1", 202611)
+    assert m.status == e.UNVERIFIED and m.planned is None
+
+
+def test_zero_effort_is_distinct_from_no_record():
+    s = snap([pt("e1", 202611, 0.0), pt("e2", 202611, 80.0)], [hr("e1"), hr("e2")])
+    assert em(s, "e1", 202611).status == e.FULLY_AVAILABLE
+    matrix = v.availability_matrix(snap([pt("e1", 202611, 0.0), pt("e2", 202612, 80.0)], [hr("e1"), hr("e2")]),
+                                   v.Filters(months=[202611, 202612]))
+    cells = {r["code"]: {c["month"]: c["state"] for c in r["cells"]} for r in matrix["rows"]}
+    assert cells["e1"][202611] == "status" and cells["e1"][202612] == "none"
+
+
+def test_zero_without_hr_match_stays_unverified_because_capacity_is_unknown():
+    s = snap([pt("x1", 202611, 0.0)], [])
+    assert em(s, "x1", 202611).status == e.UNVERIFIED
+
+
+def test_allocation_added_later_recalculates_remaining_hours():
+    """Same employee and month: zero today, hours after the next refresh. The formula is unchanged."""
+    before = em(snap([pt("e1", 202611, 0.0)], [hr("e1")]), "e1", 202611)
+    assert (before.status, before.planned, before.remaining) == (e.FULLY_AVAILABLE, 0.0, 176.0)
+    rows = [pt("e1", 202611, 0.0, project="P1"), pt("e1", 202611, 100.0, project="P2")]
+    after = em(snap(rows, [hr("e1")]), "e1", 202611)
+    assert (after.status, after.planned, after.remaining) == (e.PARTIALLY_AVAILABLE, 100.0, 76.0)
+    full = em(snap(rows + [pt("e1", 202611, 76.0, project="P3")], [hr("e1")]), "e1", 202611)
+    assert (full.status, full.remaining) == (e.FULLY_COMMITTED, 0.0)
 
 
 def test_placeholder_next_to_valid_row_is_ignored():
@@ -214,14 +251,33 @@ def availability_fixture():
 
 def test_overview_kpis_are_distinct_counts():
     k = v.availability_overview(availability_fixture(), v.Filters())["kpis"]
-    assert k == {"employees_with_records": 5, "fully_available": 0, "partially_available": 3,
-                 "fully_committed": 1, "over_allocated": 0, "unverified": 1}
+    assert k["employees_with_records"] == 5 and k["total_employees"] == 5 and k["employees_without_records"] == 0
+    assert (k["fully_available"], k["partially_available"], k["fully_committed"],
+            k["over_allocated"], k["unverified"]) == (1, 3, 1, 0, 0)
+
+
+def test_overview_kpis_count_employee_months_and_add_up():
+    """e1 is Partially Available in two months: 1 person but 2 employee-months."""
+    k = v.availability_overview(availability_fixture(), v.Filters())["kpis"]
+    m = k["employee_months"]
+    assert (m["fully_available"], m["partially_available"], m["fully_committed"],
+            m["over_allocated"], m["unverified"]) == (1, 4, 1, 0, 0)
+    assert m["total"] == 6 == sum(val for key, val in m.items() if key != "total")
+
+
+def test_overview_kpis_headcount_includes_employees_without_records():
+    s = snap([pt("e1", 202611, 80.0)], [hr("e1"), hr("bench", division="Delivery")])
+    k = v.availability_overview(s, v.Filters())["kpis"]
+    assert (k["total_employees"], k["employees_with_records"], k["employees_without_records"]) == (2, 1, 1)
+    assert k["employee_months"]["total"] == 1
+    narrowed = v.availability_overview(s, v.Filters(divisions={"Delivery"}))["kpis"]
+    assert (narrowed["total_employees"], narrowed["employees_with_records"], narrowed["employees_without_records"]) == (1, 0, 1)
 
 
 def test_overview_by_month_and_blank_months():
     months = {m["month"]: m for m in v.availability_overview(availability_fixture(), v.Filters())["months"]}
     nov = months[202611]
-    assert nov["total"] == 4 and nov["statuses"][e.PARTIALLY_AVAILABLE] == 2 and nov["statuses"][e.UNVERIFIED] == 1
+    assert nov["total"] == 4 and nov["statuses"][e.PARTIALLY_AVAILABLE] == 2 and nov["statuses"][e.FULLY_AVAILABLE] == 1
     assert nov["contracts"][e.PROGRAM_BASED] == 1 and nov["contracts"][e.FTE_BASED] == 3
     feb = months[202702]
     assert feb["has_data"] is False and feb["total"] is None and feb["statuses"][e.UNVERIFIED] is None
@@ -242,7 +298,7 @@ def test_matrix_cell_states():
     rows = {r["key"]: {c["month"]: c for c in r["cells"]} for r in m["rows"]}
     assert rows["E1"][202611]["letter"] == "P"
     assert rows["E2"][202611]["letter"] == "C"
-    assert rows["E3"][202611]["letter"] == "U"
+    assert rows["E3"][202611]["letter"] == "F"
     assert rows["E5"][202611]["state"] == "none"       # data exists for the month, no record
     assert rows["E1"][202702]["state"] == "blank"      # no Project Track data for the month at all
     assert [r["code"] for r in m["rows"]] == sorted(r["code"] for r in m["rows"])
@@ -254,6 +310,13 @@ def test_matrix_pagination_and_search():
     assert page["total"] == 5 and page["pages"] == 3 and len(page["rows"]) == 2
     found = v.availability_matrix(s, v.Filters(search="name e3"))
     assert [r["code"] for r in found["rows"]] == ["e3"]
+
+
+def test_matrix_squad_limits_rows():
+    s = availability_fixture()
+    squad = v.availability_matrix(s, v.Filters(employee_keys={"E1", "E3"}))
+    assert [r["code"] for r in squad["rows"]] == ["e1", "e3"]
+    assert squad["total"] == 2
 
 
 def test_matrix_lists_whole_employee_dimension():
@@ -300,17 +363,18 @@ def test_employee_directory_rows_kpis_and_lists():
     rows = [
         pt("over", 202611, 200.0),                       # over capacity now
         pt("busy", 202611, 160.0), pt("busy", 202612, 40.0),  # 16 h free now, 136 h free in Dec
-        pt("ph", 202611, 0.0),                           # placeholder -> unverified
+        pt("ph", 202611, 0.0),                           # zero effort -> fully available
     ]
     s = snap(rows, [hr("over"), hr("busy"), hr("ph"), hr("bench")])
     d = v.employee_directory(s)
     k = d["kpis"]
-    assert (k["total"], k["over_allocated"], k["unverified"], k["partially_available"], k["no_record"]) == (4, 1, 1, 1, 1)
+    assert (k["total"], k["over_allocated"], k["unverified"], k["partially_available"], k["no_record"]) == (4, 1, 0, 1, 1)
+    assert k["fully_available"] == 1
     by_code = {r["code"]: r for r in d["rows"]}
     assert by_code["bench"]["status"] is None and by_code["bench"]["utilisation"] is None
     assert by_code["busy"]["available_from"]["month"] == 202611
     assert round(by_code["over"]["utilisation"], 3) == round(200 / 176, 3)
-    assert [i["code"] for i in d["attention"]["items"]] == ["over", "ph"]
+    assert [i["code"] for i in d["attention"]["items"]] == ["over"]
     assert d["attention"]["items"][0]["reason"] == "24 h over capacity"
     assert [i["code"] for i in d["freeing"]["items"]] == ["busy"] and d["freeing"]["items"][0]["hours_freed"] == 120.0
 

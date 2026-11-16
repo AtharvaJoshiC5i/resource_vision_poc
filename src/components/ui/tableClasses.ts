@@ -1,73 +1,38 @@
 /**
- * Tables use product tokens (lavender-soft header, primary-soft hover, purple-indigo labels).
- * Tailwind must see these class strings at build time.
+ * Table class names. The styling itself lives in index.css (`@layer components`, `.rv-table*`),
+ * so per-cell utilities such as `text-right` or `pl-8` always win over the table defaults.
+ *
+ * Rules the system follows:
+ * - Text left-aligned, numbers right-aligned, headers aligned with their column.
+ * - 16px gutter on the outer columns, 12px between columns.
+ * - Regular rows ~48px, dense rows ~40px; horizontal rules only, no vertical grid lines.
+ * - Tabular figures everywhere so digits line up down a column.
  */
 
-const headCell = [
-  "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-[3]",
-  "[&_thead_th]:h-9 [&_thead_th]:px-3",
-  "[&_thead_th]:bg-[var(--rv-table-header-bg)]",
-  "[&_thead_th]:border-b [&_thead_th]:border-hairline",
-  "[&_thead_th]:text-left [&_thead_th]:align-middle",
-  "[&_thead_th]:text-[11px] [&_thead_th]:font-medium [&_thead_th]:leading-4",
-  "[&_thead_th]:text-ink-soft",
-  "[&_thead_th_button]:text-inherit [&_thead_th_button]:font-inherit",
-  "[&_thead_th_button:hover]:text-primary",
-  "[&_thead_th[aria-sort=ascending]]:text-ink",
-  "[&_thead_th[aria-sort=descending]]:text-ink",
-  "[&_thead_.rv-table-sticky-col]:z-[4] [&_thead_.rv-table-sticky-col]:bg-[var(--rv-table-header-bg)]",
-].join(" ");
+export const tableClass = "rv-table";
 
-const bodyCell = [
-  "[&_tbody_td]:bg-surface [&_tbody_td]:px-3 [&_tbody_td]:py-2.5 [&_tbody_td]:text-sm [&_tbody_td]:leading-5",
-  "[&_tbody_td]:border-b [&_tbody_td]:border-hairline [&_tbody_td]:align-middle",
-  "[&_tbody_th]:bg-surface [&_tbody_th]:px-3 [&_tbody_th]:py-2.5",
-  "[&_tbody_th]:border-b [&_tbody_th]:border-hairline [&_tbody_th]:align-middle [&_tbody_th]:font-normal",
-  "[&_tbody_tr:last-child_td]:border-b-0 [&_tbody_tr:last-child_th]:border-b-0",
-  "[&_tbody_tr:hover_td]:bg-primary-soft [&_tbody_tr:hover_th]:bg-primary-soft",
-  "[&_tbody_tr:hover_.rv-table-sticky-col]:bg-primary-soft",
-].join(" ");
+export const tableClassDense = "rv-table rv-table--dense";
 
-const shell = "w-full border-separate border-spacing-0 text-xs leading-5 text-ink-soft tabular-nums";
+export const tableClassInteractive = "rv-table rv-table--interactive";
 
-export const tableClass = `rv-table ${shell} ${headCell} ${bodyCell} [&_tbody_tr:focus-visible]:outline [&_tbody_tr:focus-visible]:outline-2 [&_tbody_tr:focus-visible]:outline-primary [&_tbody_tr:focus-visible]:-outline-offset-2`;
+/** Month grids: compact rows, centred status tiles. Hour columns opt into `text-right` per cell. */
+export const tableClassMatrix = "rv-table rv-table--dense rv-table--matrix";
 
-export const tableClassDense = `${tableClass} [&_thead_th]:h-8 [&_tbody_td]:py-2 [&_tbody_th]:py-2`;
-
-export const tableClassInteractive = `${tableClass} [&_tbody_tr]:cursor-pointer`;
-
-export const tableClassMatrix = [
-  tableClassDense,
-  "[&_thead_th:not(.rv-table-sticky-col)]:text-center [&_thead_th:not(.rv-table-sticky-col)]:px-2",
-  "[&_tbody_td]:px-2 [&_tbody_td]:py-2 [&_tbody_td]:text-center",
-  "[&_tbody_td]:border-r [&_tbody_td]:border-hairline",
-  "[&_tbody_td:last-child]:border-r-0",
-].join(" ");
-
-export const tableClassProseHeader = [
-  tableClassDense,
-  "[&_thead_th]:h-auto [&_thead_th]:py-2.5 [&_thead_th]:whitespace-normal [&_thead_th]:text-ink-soft",
-].join(" ");
+/** Dense table whose headers may wrap onto two lines. */
+export const tableClassProseHeader = "rv-table rv-table--dense rv-table--prose";
 
 export const tableFrameClass = [
-  "rv-table-frame overflow-auto overscroll-behavior-contain rounded-xl",
-  "border border-hairline bg-surface shadow-(--shadow-card)",
+  "rv-table-frame rv-frame rv-scroll overflow-auto overscroll-behavior-contain rounded-xl",
 ].join(" ");
 
-export const tableFrameNestedClass = [
-  "rv-table-frame rv-table-frame--nested",
-  "mt-5 overflow-auto overscroll-behavior-contain rounded-lg",
-  "border border-hairline bg-surface shadow-(--shadow-card)",
-].join(" ");
+export const tableStickyColClass = "rv-table-sticky-col";
 
-export const tableStickyColClass = [
-  "rv-table-sticky-col sticky left-0 z-[2] pl-4",
-  "border-r border-hairline bg-inherit",
-].join(" ");
+export const tableTotalColClass = "rv-table-total";
 
-export const tableTotalColClass = [
-  "rv-table-total border-l border-hairline",
-  "bg-canvas/80 font-medium text-ink",
-].join(" ");
+export const tableHeadClass = "rv-table-th";
 
-export const tableHeadClass = "";
+/** Plain column title inside a header cell (no sort control). */
+export const tableHeadLabelClass = "rv-table-head-label";
+
+/** Bordered surface panel (cards, decks, table shells). */
+export const surfaceFrameClass = "rv-frame rounded-xl";

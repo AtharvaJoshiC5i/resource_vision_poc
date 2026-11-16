@@ -1,23 +1,24 @@
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export const EM_DASH = "—";
+/** Placeholder for a missing value: a quiet en dash (never an em dash). */
+export const EMPTY = "–";
 
-/** 120 -> "120.0"; null -> "—". */
+/** 120 -> "120.0"; null -> en dash. */
 export function hours(value: number | null | undefined): string {
-  if (value === null || value === undefined) return EM_DASH;
+  if (value === null || value === undefined) return EMPTY;
   return value.toLocaleString("en-US", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 export function integer(value: number | null | undefined): string {
-  if (value === null || value === undefined) return EM_DASH;
+  if (value === null || value === undefined) return EMPTY;
   return value.toLocaleString("en-US");
 }
 
 /** "2026-10-01" -> "01 Oct 2026". */
 export function shortDate(iso: string | null | undefined): string {
-  if (!iso) return EM_DASH;
+  if (!iso) return EMPTY;
   const [year, month, day] = iso.split("-").map(Number);
-  if (!year || !month || !day) return EM_DASH;
+  if (!year || !month || !day) return EMPTY;
   return `${String(day).padStart(2, "0")} ${MONTHS[month - 1]} ${year}`;
 }
 
@@ -27,5 +28,5 @@ export function compactMonth(key: number): string {
 }
 
 export function text(value: string | null | undefined): string {
-  return value && value.trim() !== "" ? value : EM_DASH;
+  return value && value.trim() !== "" ? value : EMPTY;
 }

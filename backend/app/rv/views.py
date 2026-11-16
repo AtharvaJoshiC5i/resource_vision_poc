@@ -8,6 +8,7 @@ from datetime import date
 from typing import Any
 
 from app.rv import engine as e
+from app.rv import skills
 
 MONTH_ABBR = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
 LETTER = {
@@ -38,6 +39,14 @@ class Filters:
     locations: set[str] = field(default_factory=set)
     search: str | None = None
     statuses: set[str] = field(default_factory=set)
+    # Normalized employee codes matching the skills filter, or None when no skill filter is
+    # in effect. Resolved once per request in routes.py from the cached skills snapshot.
+    skill_codes: set[str] | None = None
+    business_verticals: set[str] = field(default_factory=set)
+    clients: set[str] = field(default_factory=set)
+    tenures: set[str] = field(default_factory=set)
+    # When set, the availability matrix lists only these employee keys (Employee 360 squad).
+    employee_keys: set[str] | None = None
 
 
 NO_RECORD_FILTER = "No record"
@@ -61,15 +70,82 @@ def filters_without_months(f: Filters) -> Filters:
         locations=set(f.locations),
         search=f.search,
         statuses=set(f.statuses),
+        skill_codes=None if f.skill_codes is None else set(f.skill_codes),
+        business_verticals=set(f.business_verticals),
+        clients=set(f.clients),
+        tenures=set(f.tenures),
     )
 
 
-def _employee_ok(emp: e.Employee, f: Filters) -> bool:
+# --------------------------------------------------------------------------- profile tags
+def _cached(snap: e.Snapshot, name: str, build):
+    value = getattr(snap, name, None)
+    if value is None:
+        value = build()
+        setattr(snap, name, value)
+    return value
+
+
+def project_client(snap: e.Snapshot, project_id: str | None) -> str | None:
+    project = snap.projects.get(project_id or "")
+    return project.client if project else None
+
+
+def _clients_by_month(snap: e.Snapshot) -> dict[str, dict[int, set[str]]]:
+    """Clients per employee per window month, from any allocation row in scope that month."""
+
+    def build() -> dict[str, dict[int, set[str]]]:
+        out: dict[str, dict[int, set[str]]] = defaultdict(lambda: defaultdict(set))
+        for key, rows in snap.rows_by_employee().items():
+            for r in rows:
+                client = project_client(snap, r.project_id)
+                if client and (key, r.month) in snap.employee_months:
+                    out[key][r.month].add(client)
+        return out
+
+    return _cached(snap, "_rv_clients_by_month", build)
+
+
+def employee_clients(snap: e.Snapshot, key: str, month: int | None = None) -> list[str]:
+    """Clients in one month, or across the whole window when month is None."""
+    per_month = _clients_by_month(snap).get(key, {})
+    if month is None:
+        found: set[str] = set().union(*per_month.values()) if per_month else set()
+    else:
+        found = per_month.get(month, set())
+    return sorted(found, key=str.casefold)
+
+
+def current_clients(snap: e.Snapshot, key: str) -> list[str]:
+    return employee_clients(snap, key, snap.window[0])
+
+
+def tenure(snap: e.Snapshot, emp: e.Employee) -> str:
+    """Fresher (0 to 18 months since date of joining) or Lateral; Unknown without a joining date."""
+    return e.tenure_band(emp.joining if emp.hr_matched else None, snap.today)
+
+
+def _profile_tags(snap: e.Snapshot, emp: e.Employee) -> dict[str, Any]:
+    return {
+        "business_vertical": emp.business_vertical,
+        "tenure": tenure(snap, emp),
+        "clients": current_clients(snap, emp.key),
+    }
+
+
+def _employee_ok(snap: e.Snapshot, emp: e.Employee, f: Filters) -> bool:
+    if f.business_verticals and emp.business_vertical not in f.business_verticals:
+        return False
+    if f.tenures and tenure(snap, emp) not in f.tenures:
+        return False
+    if f.clients and not (set(employee_clients(snap, emp.key, None)) & f.clients):
+        return False
     return (
         (not f.divisions or emp.division in f.divisions)
         and (not f.capabilities or emp.primary_capability in f.capabilities)
         and (not f.grades or emp.grade in f.grades)
         and (not f.locations or emp.location in f.locations)
+        and (f.skill_codes is None or skills.normalize_code(emp.code) in f.skill_codes)
     )
 
 
@@ -81,7 +157,7 @@ def filtered_employee_months(snap: e.Snapshot, f: Filters) -> list[e.EmployeeMon
             continue
         if f.contract_categories and em.contract_category not in f.contract_categories:
             continue
-        if not _employee_ok(snap.employees[em.key], f):
+        if not _employee_ok(snap, snap.employees[em.key], f):
             continue
         result.append(em)
     return result
@@ -111,17 +187,41 @@ def availability_options(snap: e.Snapshot) -> dict[str, Any]:
         "capabilities": values("primary_capability"),
         "grades": values("grade"),
         "locations": values("location"),
+        "business_verticals": values("business_vertical"),
+        "clients": sorted({p.client for p in snap.projects.values() if p.client}, key=str.casefold),
+        "tenures": list(e.TENURE_BANDS),
     }
 
 
 def availability_overview(snap: e.Snapshot, f: Filters) -> dict[str, Any]:
-    ems_kpi = filtered_employee_months(snap, filters_without_months(f))
+    kpi_filters = filters_without_months(f)
+    ems_kpi = filtered_employee_months(snap, kpi_filters)
     status_sets: dict[str, set[str]] = {s: set() for s in e.STATUSES}
+    status_months: dict[str, int] = {s: 0 for s in e.STATUSES}
     for em in ems_kpi:
         status_sets[em.status].add(em.key)
+        status_months[em.status] += 1
+
+    with_records = len({em.key for em in ems_kpi})
+    # Headcount comes from the whole employee dimension (like the matrix), narrowed by the same
+    # dimension filters as the status counts so that with records + no record = total.
+    total_employees = sum(1 for emp in snap.employees.values() if _employee_ok(snap, emp, kpi_filters))
 
     kpis = {
-        "employees_with_records": len({em.key for em in ems_kpi}),
+        "total_employees": total_employees,
+        "employees_with_records": with_records,
+        "employees_without_records": max(total_employees - with_records, 0),
+        # Planned employee-months over the whole window: one employee with a record in a month
+        # counts once, under that month's status. Months without Project Track data add nothing.
+        "employee_months": {
+            "total": len(ems_kpi),
+            "fully_available": status_months[e.FULLY_AVAILABLE],
+            "partially_available": status_months[e.PARTIALLY_AVAILABLE],
+            "fully_committed": status_months[e.FULLY_COMMITTED],
+            "over_allocated": status_months[e.OVER_ALLOCATED],
+            "unverified": status_months[e.UNVERIFIED],
+        },
+        # Distinct people who had the status in at least one month (they overlap across statuses).
         "fully_available": len(status_sets[e.FULLY_AVAILABLE]),
         "partially_available": len(status_sets[e.PARTIALLY_AVAILABLE]),
         "fully_committed": len(status_sets[e.FULLY_COMMITTED]),
@@ -167,7 +267,7 @@ def availability_matrix(
     if f.contract_categories:
         candidates = {em.key for em in ems}
     else:
-        candidates = {k for k, emp in snap.employees.items() if _employee_ok(emp, f)}
+        candidates = {k for k, emp in snap.employees.items() if _employee_ok(snap, emp, f)}
     keys = {k for k in candidates if _matches_search(snap.employees[k], f.search)}
     if f.statuses:
         # Keep employees who have any wanted status (or, for "No record", a missing row in a month that
@@ -186,7 +286,10 @@ def availability_matrix(
             return False
 
         keys = {k for k in keys if _hit(k)}
-    people = sorted((snap.employees[k] for k in keys), key=lambda p: (p.code.casefold(), p.key))
+    if f.employee_keys:
+        wanted = {k.strip().upper() for k in f.employee_keys if k and k.strip()}
+        keys &= wanted
+    people = sorted((snap.employees[k] for k in keys if k in snap.employees), key=lambda p: (p.code.casefold(), p.key))
 
     total = len(people)
     page_size = max(1, min(page_size, 200))
@@ -224,6 +327,8 @@ def availability_matrix(
                 "code": person.code,
                 "name": person.name,
                 "hr_match": person.hr_matched,
+                "location": person.location,
+                **_profile_tags(snap, person),
                 "cells": cells,
             }
         )
@@ -295,6 +400,9 @@ def employee_directory(snap: e.Snapshot, month: int | None = None) -> dict[str, 
                 "capability": emp.primary_capability,
                 "location": emp.location,
                 "hr_match": emp.hr_matched,
+                "business_vertical": emp.business_vertical,
+                "tenure": tenure(snap, emp),
+                "clients": employee_clients(snap, emp.key, current),
                 "status": em.status if em else None,
                 "projects": em.project_count if em else None,
                 "planned_hours": em.planned if em else None,
@@ -421,10 +529,15 @@ def employee_detail(snap: e.Snapshot, key: str) -> dict[str, Any] | None:
             "employment_type": emp.employment_type,
             "joining_date": _iso(emp.joining),
             "email": emp.email,
+            "business_vertical": emp.business_vertical,
+            "tenure": tenure(snap, emp),
+            "tenure_months": e.tenure_months(emp.joining, snap.today) if emp.hr_matched else None,
+            "current_clients": current_clients(snap, emp.key),
         },
         "months": months,
         "totals": totals,
         "allocations": allocations,
+        "skills": skills.employee_skills(skills.get_skills_snapshot(), emp.code),
     }
 
 
@@ -694,4 +807,64 @@ def project_detail(snap: e.Snapshot, project_id: str, f: Filters) -> dict[str, A
         "trend": trend,
         "months": [{"key": m, "label": month_label(m)} for m in months],
         "employees": employees,
+    }
+
+
+# --------------------------------------------------------------------------- accounts
+def account_utilization(snap: e.Snapshot, f: Filters) -> dict[str, Any]:
+    """Planned hours per client account over the selected months.
+
+    Only verified (valid) rows add planned hours; an employee counts toward an account when they have
+    any allocation row with it in an in-scope month. The employee filters (vertical, tenure, client,
+    location, grade, capability, skills, search) narrow which people count. Planned, not actual, hours.
+    """
+    months = selected_months(snap, f)
+    in_months = set(months)
+    stats: dict[str, dict[str, Any]] = {}
+    for r in snap.rows:
+        if not r.named or r.month not in in_months or (r.employee_key, r.month) not in snap.employee_months:
+            continue
+        client = project_client(snap, r.project_id)
+        if not client:
+            continue
+        if f.clients and client not in f.clients:
+            continue
+        emp = snap.employees[r.employee_key]
+        if not _employee_ok(snap, emp, f) or not _matches_search(emp, f.search):
+            continue
+        s = stats.setdefault(
+            client, {"employees": set(), "projects": set(), "planned": None, "by_month": defaultdict(float)}
+        )
+        s["employees"].add(r.employee_key)
+        if r.project_id:
+            s["projects"].add(r.project_id)
+        if r.status == e.VALID:
+            s["planned"] = (s["planned"] or 0.0) + r.effort
+            s["by_month"][r.month] += r.effort
+
+    total_planned = sum(s["planned"] or 0.0 for s in stats.values())
+    rows = []
+    for client, s in stats.items():
+        rows.append(
+            {
+                "client": client,
+                "employees": len(s["employees"]),
+                "projects": len(s["projects"]),
+                "planned_hours": s["planned"],
+                "share": (s["planned"] / total_planned) if s["planned"] and total_planned else None,
+                "months": [
+                    {"month": m, "label": month_label(m), "planned_hours": s["by_month"].get(m)} for m in months
+                ],
+            }
+        )
+    rows.sort(key=lambda r: (-(r["planned_hours"] or 0.0), r["client"].casefold()))
+    people: set[str] = set().union(*(s["employees"] for s in stats.values())) if stats else set()
+    return {
+        "months": [{"key": m, "label": month_label(m)} for m in months],
+        "totals": {
+            "accounts": len(rows),
+            "employees": len(people),
+            "planned_hours": total_planned if stats else None,
+        },
+        "rows": rows,
     }

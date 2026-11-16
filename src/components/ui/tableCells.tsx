@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
-import { EM_DASH } from "../../lib/format";
+import { EMPTY } from "../../lib/format";
+import { Tooltip } from "./Tooltip";
 
 /** Default body copy in a data cell. */
 export const tableBodyText = "text-sm leading-5 text-ink-soft";
@@ -33,19 +34,25 @@ export function HoursMetricPill({
 }) {
   const label = title ?? `${consumed} of ${capacity} hours planned this month`;
   return (
-    <span className={metricPillClass} title={label} aria-label={label}>
-      <span className="font-medium text-ink">{consumed} h</span>
-      <span className="font-normal text-muted">of</span>
-      <span className="font-medium text-ink-soft">{capacity} h</span>
-    </span>
+    <Tooltip content={label}>
+      <span className={metricPillClass} aria-label={label}>
+        <span className="font-medium text-ink">{consumed} h</span>
+        <span className="font-normal text-muted">of</span>
+        <span className="font-medium text-ink-soft">{capacity} h</span>
+      </span>
+    </Tooltip>
   );
 }
 
-export function TableEmpty({ title }: { title?: string }) {
+/** Missing value: a quiet en dash with the reason on hover. No box, so empty cells recede. */
+export function TableEmpty({ title: hint }: { title?: string }) {
+  const label = hint ?? "No value";
   return (
-    <span className={`${chipClass} min-h-6 min-w-[1.75rem] justify-center text-muted`} title={title}>
-      {EM_DASH}
-    </span>
+    <Tooltip content={hint}>
+      <span className="inline-block min-w-4 text-center text-border" aria-label={label}>
+        {EMPTY}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -58,11 +65,12 @@ export function TableText({
   title?: string;
   className?: string;
 }) {
-  return (
-    <span className={`block min-w-0 max-w-[28rem] truncate ${tableBodyText} ${className}`} title={title ?? (typeof children === "string" ? children : undefined)}>
-      {children}
-    </span>
+  const hint = title ?? (typeof children === "string" ? children : undefined);
+  const text = (
+    <span className={`block min-w-0 max-w-[28rem] truncate ${tableBodyText} ${className}`}>{children}</span>
   );
+  if (!hint) return text;
+  return <Tooltip content={hint}>{text}</Tooltip>;
 }
 
 export function TableNumeric({
@@ -87,16 +95,17 @@ export function TableHourCell({
   muted?: boolean;
   title?: string;
 }) {
-  return (
+  const cell = (
     <span
-      className={`inline-flex min-h-[1.75rem] min-w-[2.75rem] items-center justify-end rounded-md px-1.5 py-0.5 ${muted ? "text-muted" : tableBodyNumericStrong}`}
-      title={title}
+      className={`inline-flex min-h-7 min-w-11 items-center justify-end rounded-md px-1.5 py-0.5 ${muted ? "text-muted" : tableBodyNumericStrong}`}
     >
       {children}
     </span>
   );
+  if (!title) return cell;
+  return <Tooltip content={title}>{cell}</Tooltip>;
 }
 
 /** Trailing affordance column. */
 export const tableRowActionClass =
-  "flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors group-hover:bg-primary-soft group-hover:text-primary group-focus-within:bg-primary-soft group-focus-within:text-primary";
+  "flex h-7 w-7 items-center justify-center rounded-md text-border transition-colors group-hover:bg-surface group-hover:text-primary group-hover:shadow-(--shadow-control) group-focus-within:text-primary";

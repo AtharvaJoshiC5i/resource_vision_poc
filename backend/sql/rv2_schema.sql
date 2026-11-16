@@ -332,7 +332,10 @@ BEGIN
            UnresolvedRows  = SUM(CASE WHEN a.RowStatus = 'unresolved'  THEN 1 ELSE 0 END),
            ProjectCount    = COUNT(DISTINCT a.ProjectId),
            RawHours        = COALESCE(SUM(a.Effort), 0),
-           VerifiedHours   = SUM(CASE WHEN a.RowStatus = 'valid'      THEN a.Effort END),
+           /* An explicit zero is a valid value: placeholder-only months (none unresolved) have 0 verified hours. */
+           VerifiedHours   = CASE WHEN SUM(CASE WHEN a.RowStatus = 'valid' THEN 1 ELSE 0 END) > 0
+                                  THEN SUM(CASE WHEN a.RowStatus = 'valid' THEN a.Effort END)
+                                  WHEN SUM(CASE WHEN a.RowStatus = 'unresolved' THEN 1 ELSE 0 END) = 0 THEN 0.0 END,
            UnresolvedHours = SUM(CASE WHEN a.RowStatus = 'unresolved' THEN a.Effort END),
            HasFte          = MAX(CASE WHEN a.ContractClass = 'FTE'     THEN 1 ELSE 0 END),
            HasProgram      = MAX(CASE WHEN a.ContractClass = 'Program' THEN 1 ELSE 0 END)
@@ -340,11 +343,12 @@ BEGIN
     FROM #Alloc a
     GROUP BY a.EmployeeKey, a.MonthKey;
 
-    /* Out of scope: a matched employee with valid dates who is not employed that month. */
+    /* Out of scope: a matched employee with valid dates who is not employed that month.
+       An explicit zero is a valid value: VerifiedHours is 0 (not NULL) for placeholder-only months,
+       so Planned = 0 and the month is Fully Available with the full capacity remaining. */
     SELECT x.*, e.HrMatched, e.DatesValid,
            Capacity = CASE WHEN e.HrMatched = 1 AND e.DatesValid = 1 THEN @CapacityHours END,
-           Planned  = CASE WHEN x.UnresolvedRows = 0 AND x.ValidRows > 0 AND e.HrMatched = 1
-                           THEN x.VerifiedHours END
+           Planned  = CASE WHEN x.UnresolvedRows = 0 AND e.HrMatched = 1 THEN x.VerifiedHours END
     INTO #EM2
     FROM #EM x
     JOIN #Emp e    ON e.EmployeeKey = x.EmployeeKey
@@ -405,8 +409,8 @@ BEGIN
                WHEN z.Capacity IS NULL OR z.Planned IS NULL THEN
                     CASE WHEN z.HrMatched = 0 THEN N'Missing HR match: capacity not established'
                          WHEN z.Capacity IS NULL THEN N'Employment dates invalid: capacity not established'
-                         WHEN z.UnresolvedRows > 0 THEN CAST(z.UnresolvedRows AS nvarchar(20)) + N' record(s) need review'
-                         ELSE N'Only zero-effort records: effort marked 0, not verified' END
+                         ELSE CAST(z.UnresolvedRows AS nvarchar(20)) + N' record(s) need review' END
+               WHEN ROUND(z.Planned, 6) = 0 THEN N'Zero planned effort recorded: full capacity available'
                ELSE N'Capacity and allocation resolved' END,
            ContractCategory = CASE WHEN z.HasFte = 1 THEN N'FTE-Based'
                                    WHEN z.HasProgram = 1 THEN N'Program-Based'

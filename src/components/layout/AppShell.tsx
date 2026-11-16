@@ -16,6 +16,7 @@ import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
 import type { Meta } from "../../api/types";
 import { shortDate } from "../../lib/format";
+import { Tooltip } from "../ui/Tooltip";
 import { AvailabilityGuidePanel, AvailabilityGuideTrigger } from "./AvailabilityGuide";
 
 const NAV: { to: string; label: string; end: boolean; icon: LucideIcon }[] = [
@@ -35,7 +36,7 @@ function Brand({ titleId, compact = false }: { titleId?: string; compact?: boole
     <div className="flex min-h-0 min-w-0 items-center gap-2">
       <BrandMark size={compact ? "sm" : "md"} />
       <div className={`min-w-0 leading-none ${compact ? "sr-only" : ""}`}>
-        <span id={titleId} className="block truncate text-sm font-medium tracking-tight text-ink">
+        <span id={titleId} className="block truncate text-sm font-semibold tracking-[-0.011em] text-ink">
           Resource Vision
         </span>
         <span className="mt-0.5 block truncate text-xs text-muted">Workforce planning</span>
@@ -56,21 +57,21 @@ function SidebarNav({
   onOpenGuide?: () => void;
 }) {
   return (
-    <nav id={id} aria-label="Primary" className="flex min-h-0 flex-1 flex-col px-2.5 pt-2">
+    <nav id={id} aria-label="Primary" className="flex min-h-0 flex-1 flex-col px-2.5 pt-1">
+      {!compact ? <p className="mb-1.5 px-2.5 text-[11px] font-medium text-muted">Workspace</p> : null}
       <ul className={`flex flex-col gap-0.5 ${compact ? "items-center" : ""}`}>
-        {NAV.map((item) => (
-          <li key={item.to} className={compact ? "" : "w-full"}>
+        {NAV.map((item) => {
+          const link = (
             <NavLink
               to={item.to}
               end={item.end}
               onClick={onNavigate}
-              title={compact ? item.label : undefined}
               className={({ isActive }) =>
                 [
-                  "relative flex h-9 touch:h-11 items-center rounded-lg text-[13px] transition-colors",
+                  "relative flex h-9 touch:h-11 items-center rounded-lg text-sm transition-[background-color,color]",
                   compact ? "w-10 touch:w-11 justify-center" : "w-full gap-3 px-2.5",
                   isActive
-                    ? "bg-surface font-medium text-ink shadow-(--shadow-card) before:absolute before:inset-y-1.5 before:left-0 before:w-0.5 before:rounded-full before:bg-primary"
+                    ? "bg-primary-soft/80 font-medium text-ink before:absolute before:inset-y-2 before:-left-2.5 before:w-[3px] before:rounded-r-full before:bg-primary"
                     : "text-ink-soft hover:bg-canvas hover:text-ink",
                 ].join(" ")
               }
@@ -80,14 +81,19 @@ function SidebarNav({
                   <item.icon
                     aria-hidden="true"
                     strokeWidth={isActive ? 2.1 : 1.8}
-                    className={`h-[17px] w-[17px] shrink-0 ${isActive ? "text-primary" : "text-muted"}`}
+                    className={`h-4 w-4 shrink-0 ${isActive ? "text-primary" : "text-muted"}`}
                   />
                   <span className={compact ? "sr-only" : "truncate"}>{item.label}</span>
                 </>
               )}
             </NavLink>
-          </li>
-        ))}
+          );
+          return (
+            <li key={item.to} className={compact ? "" : "w-full"}>
+              {compact ? <Tooltip content={item.label}>{link}</Tooltip> : link}
+            </li>
+          );
+        })}
       </ul>
       {onOpenGuide ? (
         <div className={`mt-auto border-t border-hairline pt-2 ${compact ? "flex justify-center" : ""}`}>
@@ -101,7 +107,7 @@ function SidebarNav({
 function SidebarFootnote({ meta, expanded }: { meta: Meta | null | undefined; expanded: boolean }) {
   if (!expanded) return null;
   if (!meta) {
-    return <div className="h-4 w-24 animate-pulse rounded bg-canvas" aria-hidden="true" />;
+    return <div className="skeleton h-4 w-24" aria-hidden="true" />;
   }
   return (
     <p className="truncate text-xs text-muted">
@@ -178,15 +184,16 @@ function DesktopSidebar({
   const toggleLabel = collapsed ? "Keep sidebar open" : "Collapse sidebar";
   const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
   const toggleButton = !wide ? null : (
-    <button
-      type="button"
-      onClick={toggle}
-      aria-label={toggleLabel}
-      title={toggleLabel}
-      className="grid h-8 w-8 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink"
-    >
-      <ToggleIcon aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
-    </button>
+    <Tooltip content={toggleLabel}>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label={toggleLabel}
+        className="grid h-8 w-8 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink"
+      >
+        <ToggleIcon aria-hidden="true" className="h-4 w-4" strokeWidth={1.8} />
+      </button>
+    </Tooltip>
   );
 
   return (
@@ -202,12 +209,12 @@ function DesktopSidebar({
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) schedulePeek(false);
       }}
-      className={`fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden border-r border-hairline bg-canvas/95 backdrop-blur-[2px] transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none md:flex ${
+      className={`rv-shell-rail fixed inset-y-0 left-0 z-30 hidden flex-col overflow-hidden bg-surface transition-[width] duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none md:flex ${
         expanded ? "w-60" : "w-16"
       }`}
     >
       <div
-        className={`flex h-12 shrink-0 items-center border-b border-hairline bg-canvas ${
+        className={`flex h-14 shrink-0 items-center border-b border-hairline bg-surface ${
           expanded ? "justify-between gap-2 pl-3 pr-2" : "justify-center px-1.5"
         }`}
       >
@@ -221,11 +228,11 @@ function DesktopSidebar({
         )}
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-surface py-2">
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden bg-surface py-3">
         <SidebarNav compact={!expanded} onOpenGuide={onOpenGuide} />
       </div>
 
-      <div className="shrink-0 border-t border-hairline bg-surface px-3 py-2.5">
+      <div className="shrink-0 border-t border-hairline bg-surface px-4 py-3">
         <SidebarFootnote meta={meta} expanded={expanded} />
       </div>
     </aside>
@@ -271,11 +278,11 @@ export function AppShell() {
       <AvailabilityGuidePanel open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-clip bg-canvas pr-[env(safe-area-inset-right)] max-md:pl-[env(safe-area-inset-left)] md:ml-[var(--rv-sidebar-width,4rem)] md:min-h-0 md:overflow-y-auto md:overflow-x-hidden">
-        <header className="sticky top-0 z-20 flex h-12 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-canvas/95 px-4 backdrop-blur-[6px] md:hidden">
+        <header className="rv-chrome-bar sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-3 bg-surface/90 px-4 backdrop-blur-md md:hidden">
           <Brand />
           <button
             type="button"
-            className="grid h-9 w-9 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-lg border border-border text-ink hover:bg-surface"
+            className="rv-btn-secondary grid h-9 w-9 touch:h-11 touch:w-11 shrink-0 place-items-center rounded-lg text-ink hover:bg-canvas"
             aria-expanded={menuOpen}
             aria-controls={mobileNavId}
             aria-label={menuOpen ? "Close navigation" : "Open navigation"}
@@ -286,12 +293,15 @@ export function AppShell() {
         </header>
 
         {!sidebarExpanded ? (
-          <header className="sticky top-0 z-20 hidden h-12 shrink-0 items-center border-b border-hairline bg-canvas px-6 md:flex lg:px-8">
+          <header className="rv-chrome-bar sticky top-0 z-20 hidden h-14 shrink-0 items-center bg-surface/90 px-6 backdrop-blur-md md:flex lg:px-8">
             <Brand />
           </header>
         ) : null}
 
-        <main id="main" className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6 short:py-2">
+        <main
+          id="main"
+          className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6 short:py-2"
+        >
           <Outlet />
         </main>
       </div>
@@ -301,13 +311,13 @@ export function AppShell() {
           <button
             type="button"
             aria-label="Dismiss menu"
-            className="fixed inset-0 z-40 bg-ink/40 md:hidden"
+            className="rv-backdrop fixed inset-0 z-40 bg-ink/40 backdrop-blur-[2px] md:hidden"
             onClick={() => setMenuOpen(false)}
           />
           <div
             ref={drawerRef}
             tabIndex={-1}
-            className="fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col border-r border-hairline bg-surface pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-(--shadow-popover) ring-1 ring-inset ring-ink/[0.03] outline-none md:hidden"
+            className="rv-drawer fixed inset-y-0 left-0 z-50 flex w-[min(18rem,88vw)] flex-col border-r border-hairline bg-surface pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] shadow-(--shadow-popover) outline-none md:hidden"
             role="dialog"
             aria-modal="true"
             aria-labelledby="mobile-nav-title"

@@ -15,6 +15,7 @@ FIRST = ["Alex", "Brooke", "Daniel", "Emma", "Liam", "Olivia", "Noah", "Ava", "E
          "Mason", "Isla", "Lucas", "Mia", "Henry", "Zoe", "Owen", "Ruby", "Jack", "Nora"]
 LAST = ["Carter", "Davis", "Wilson", "Parker", "Bennett", "Mitchell", "Collins", "Rogers", "Reed", "Grant"]
 DIVISIONS = ["Technology Solutions", "Digital Services", "Consulting"]
+VERTICALS = ["HLS (Healthcare and Life sciences)", "RCM (Retail, CPG and Mfg)", "TMT (Tech, Media and Telecom)"]
 CAPS = ["Data Engineering", "Cloud Engineering", "Data Analytics", "AI & Analytics"]
 GRADES = ["C1", "C2", "C3", "C4"]
 LOCS = ["Onshore", "Offshore"]
@@ -111,6 +112,7 @@ def build_demo(today: date) -> tuple[list[dict], list[dict]]:
                 "manager_name": "Michael Grant",
                 "manager_code": "E0001",
                 "employment_type": "Full Time",
+                "business_vertical": VERTICALS[n % 3],
             }
         )
         if status != "Existing":

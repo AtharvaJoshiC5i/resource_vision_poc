@@ -11,6 +11,7 @@ from typing import Any
 
 from app.database import fetch_rows
 from app.rv import engine as e
+from app.rv.sql import HR_BUSINESS_VERTICAL, PROJECT_CLIENTS
 
 META = "SELECT TOP 1 Version, RefreshedUtc, TodayDate, CapacityHours FROM dbo.rv2_Meta WHERE MetaId = 1"
 MONTHS = "SELECT MonthKey, HasData FROM dbo.rv2_MonthInfo ORDER BY MonthKey"
@@ -44,6 +45,31 @@ def _f(value: Any) -> float | None:
     return None if value is None else float(value)
 
 
+def _business_verticals() -> dict[str, str]:
+    """ZingHR Business Vertical per employee key; duplicated keys are dropped like the HR match."""
+    seen: dict[str, str | None] = {}
+    dupes: set[str] = set()
+    for r in fetch_rows(HR_BUSINESS_VERTICAL):
+        key = r["employee_key"]
+        if key in seen:
+            dupes.add(key)
+        seen[key] = r["business_vertical"]
+    return {k: v for k, v in seen.items() if v and k not in dupes}
+
+
+def _project_clients() -> dict[str, str]:
+    """Client per project: parent account, else account, from the first row that has one."""
+    result: dict[str, tuple[str, str]] = {}
+    for r in fetch_rows(PROJECT_CLIENTS):
+        if not r["client"]:
+            continue
+        order = r["row_id"] or "￿"
+        current = result.get(r["project_id"])
+        if current is None or order < current[0]:
+            result[r["project_id"]] = (order, r["client"])
+    return {k: v for k, (_, v) in result.items()}
+
+
 def load_snapshot_from_facts() -> tuple[e.Snapshot, dict[str, Any]]:
     meta = read_meta()
     if meta is None:
@@ -52,6 +78,8 @@ def load_snapshot_from_facts() -> tuple[e.Snapshot, dict[str, Any]]:
     months = fetch_rows(MONTHS)
     window = [int(m["MonthKey"]) for m in months]
 
+    verticals = _business_verticals()
+    clients = _project_clients()
     employees = {
         r["EmployeeKey"]: e.Employee(
             key=r["EmployeeKey"], code=r["EmployeeCode"], name=r["Name"], name_source=r["NameSource"],
@@ -61,6 +89,7 @@ def load_snapshot_from_facts() -> tuple[e.Snapshot, dict[str, Any]]:
             grade=r["Grade"], country=r["Country"], location=r["Location"], division=r["Division"],
             department=r["Department"], email=r["Email"], manager_name=r["ManagerName"],
             manager_code=r["ManagerCode"], employment_type=r["EmploymentType"],
+            business_vertical=verticals.get(r["EmployeeKey"]) if r["HrMatched"] else None,
         )
         for r in fetch_rows(EMPLOYEES)
     }
@@ -98,6 +127,7 @@ def load_snapshot_from_facts() -> tuple[e.Snapshot, dict[str, Any]]:
             lead=r["ProjectLead"] or na, contract_type=r["ContractType"] or na,
             contract_category=r["ContractCategory"] or e.NOT_SPECIFIED,
             start=r["StartDate"], end=r["EndDate"], description=r["Description"] or na,
+            client=clients.get(r["ProjectId"]),
         )
 
     snapshot = e.Snapshot(

@@ -1,53 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  Activity,
-  ArrowDown,
-  ArrowUp,
-  ChevronRight,
-  ChevronsUpDown,
-  FolderKanban,
-  UserRoundCheck,
-  UsersRound,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronRight, ChevronsUpDown } from "lucide-react";
 
 import type { ProjectOptions, ProjectRow, ProjectsOverview } from "../../api/types";
-import { MultiSelect, SelectField } from "../../components/ui/MultiSelect";
-import { FilterCard, PageZones, SummarySection } from "../../components/layout/pageZones";
-import {
-  Card,
-  EmptyBlock,
-  ErrorBlock,
-  KpiCard,
-  MetaField,
-  PageHeader,
-  Pill,
-  TableSkeleton,
-  buttonClass,
-  fieldClass,
-  labelClass,
-  TableFrame,
-  rowChevronClass,
-} from "../../components/ui/primitives";
-import {
-  tableClassInteractive,
-  tableHeadClass,
-  tableStickyColClass,
-} from "../../components/ui/tableClasses";
-import {
-  TableNumeric,
-  TableText,
-  tableBodyId,
-  tableRowActionClass,
-} from "../../components/ui/tableCells";
-import { sortIconClass } from "../../components/ui/tableStyles";
+import { MultiSelect } from "../../components/ui/MultiSelect";
+import { DashboardBody, DashboardControlDeck, DashboardPage } from "../../components/layout/pageZones";
+import { EmptyBlock, ErrorBlock, MetaField, Pill, SegmentedControl, TableSkeleton, buttonClass, fieldClass, labelClass, rowChevronClass } from "../../components/ui/primitives";
+import { tableClassInteractive, tableHeadClass, tableStickyColClass } from "../../components/ui/tableClasses";
+import { TableNumeric, TableText, tableBodyId, tableRowActionClass } from "../../components/ui/tableCells";
+import { sortIconClass, tableSortButtonClass } from "../../components/ui/tableStyles";
+import { KpiBand, KpiGroup, KpiStat } from "../../components/ui/KpiBand";
+import { TableCard, TableScroll } from "../../components/ui/TableCard";
 import { useApi } from "../../hooks/useApi";
 import { useUrlFilters } from "../../hooks/useUrlFilters";
 import { hours, integer, shortDate } from "../../lib/format";
 import { CONTRACT_ORDER, projectStatusTone } from "../../lib/status";
+import { AccountUtilizationCard } from "./AccountUtilization";
 import { ProjectSearchCombobox } from "./projectPicker";
 
-const FILTER_KEYS = ["months", "cc", "coverage", "q"] as const;
 const COVERAGE_DEFAULT = "All Projects";
+
+type BodyView = "projects" | "accounts";
+
+/** One table at a time below the control deck: projects or accounts, switched from either card header. */
+function BodyViewSwitch({ value, onChange }: { value: BodyView; onChange: (next: BodyView) => void }) {
+  return (
+    <SegmentedControl
+      label="Show"
+      value={value}
+      onChange={onChange}
+      options={[
+        { value: "projects", label: "Projects" },
+        { value: "accounts", label: "By account" },
+      ]}
+    />
+  );
+}
 
 type SortKey = keyof Pick<
   ProjectRow,
@@ -63,8 +50,11 @@ const COLUMNS: { key: SortKey; label: string; numeric?: boolean }[] = [
   { key: "start", label: "Start" },
   { key: "end", label: "End" },
   { key: "employees", label: "Employees", numeric: true },
-  { key: "planned_hours", label: "Planned h", numeric: true },
+  { key: "planned_hours", label: "Planned hours", numeric: true },
 ];
+
+/** The desktop table folds the ID under the project name, so it has no column of its own. */
+const TABLE_COLUMNS = COLUMNS.filter((col) => col.key !== "id");
 
 function compare(a: ProjectRow, b: ProjectRow, key: SortKey): number {
   const left = a[key];
@@ -85,7 +75,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
 
   return (
     <>
-    <div className="mb-3 flex items-end gap-2 md:hidden">
+    <div className="flex items-end gap-2 border-b border-hairline px-4 py-3 md:hidden">
       <div className="min-w-0 flex-1">
         <label htmlFor="project-portfolio-sort" className={labelClass}>
           Sort by
@@ -113,12 +103,12 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
       </button>
     </div>
 
-    <ul aria-label="Project portfolio" className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline md:hidden">
+    <ul aria-label="Project portfolio" className="divide-y divide-hairline md:hidden">
       {sorted.map((row) => {
         const tone = projectStatusTone(row.status);
         return (
           <li key={row.id} className="relative transition-colors hover:bg-canvas">
-            <div className="flex flex-col gap-3 px-3 py-3">
+            <div className="flex flex-col gap-3 px-4 py-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <button
@@ -140,7 +130,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                 <MetaField label="Start" value={shortDate(row.start)} />
                 <MetaField label="End" value={shortDate(row.end)} />
                 <MetaField label="Employees" value={row.employees} />
-                <MetaField label="Planned h" value={hours(row.planned_hours)} />
+                <MetaField label="Planned hours" value={hours(row.planned_hours)} />
               </dl>
             </div>
           </li>
@@ -148,11 +138,11 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
       })}
     </ul>
 
-    <TableFrame nested className="hidden md:block" tabIndex={0} role="region" aria-label="Project portfolio">
+    <TableScroll className="hidden md:block" label="Project portfolio">
       <table className={`${tableClassInteractive} min-w-[920px]`}>
         <thead>
           <tr>
-            {COLUMNS.map((col, colIndex) => {
+            {TABLE_COLUMNS.map((col, colIndex) => {
               const active = sort.key === col.key;
               const Icon = !active ? ChevronsUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
               return (
@@ -164,7 +154,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                 >
                   <button
                     type="button"
-                    className="group/sort -mx-1 inline-flex items-center gap-1 rounded px-1 touch:py-2.5"
+                    className={tableSortButtonClass(col.numeric ? "right" : "left")}
                     onClick={() =>
                       setSort((prev) => ({ key: col.key, dir: prev.key === col.key && prev.dir === "asc" ? "desc" : "asc" }))
                     }
@@ -196,13 +186,11 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                 }}
                 className="group text-ink-soft"
               >
-                <td className={`${tableStickyColClass}`}>
-                  <span className="block truncate text-[13px] font-medium leading-5 text-ink transition-colors group-hover:text-primary">
+                <td className={`${tableStickyColClass} max-w-[18rem]`}>
+                  <TableText className="text-sm font-medium leading-5 text-ink transition-colors group-hover:text-primary">
                     {row.name}
-                  </span>
-                </td>
-                <td className="whitespace-nowrap">
-                  <span className={tableBodyId}>{row.id}</span>
+                  </TableText>
+                  <span className={`mt-0.5 block ${tableBodyId}`}>{row.id}</span>
                 </td>
                 <td>
                   <TableText title={row.client_bu}>{row.client_bu}</TableText>
@@ -222,14 +210,10 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
                   <TableNumeric>{shortDate(row.end)}</TableNumeric>
                 </td>
                 <td className="text-right">
-                  <TableNumeric strong className="inline-block w-full text-right">
-                    {row.employees}
-                  </TableNumeric>
+                  <TableNumeric strong>{row.employees}</TableNumeric>
                 </td>
                 <td className="text-right">
-                  <TableNumeric strong className="inline-block w-full text-right">
-                    {hours(row.planned_hours)}
-                  </TableNumeric>
+                  <TableNumeric strong>{hours(row.planned_hours)}</TableNumeric>
                 </td>
                 <td className="w-12 text-right">
                   <span className={`ml-auto ${tableRowActionClass}`}>
@@ -241,7 +225,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
           })}
         </tbody>
       </table>
-    </TableFrame>
+    </TableScroll>
     </>
   );
 }
@@ -252,6 +236,9 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
   const contract = url.getAll("cc");
   const coverage = url.getOne("coverage") || COVERAGE_DEFAULT;
   const search = url.getOne("q");
+  const bodyView: BodyView = url.getOne("view") === "accounts" ? "accounts" : "projects";
+  const setBodyView = (next: BodyView) => url.setValues({ view: next === "projects" ? null : next });
+  const viewSwitch = <BodyViewSwitch value={bodyView} onChange={setBodyView} />;
   const [searchText, setSearchText] = useState(search);
 
   useEffect(() => {
@@ -270,125 +257,106 @@ export function ProjectsDirectory({ onOpen }: { onOpen: (id: string) => void }) 
     (contract.length > 0 ? 1 : 0) +
     (coverage !== COVERAGE_DEFAULT ? 1 : 0) +
     (search ? 1 : 0);
-  const resetFilters = () => url.reset(["project"]);
+  const resetFilters = () => url.reset(["project", "view"]);
 
-  const rows = overview.data?.rows ?? [];
+  const rows = useMemo(() => overview.data?.rows ?? [], [overview.data]);
   const kpis = overview.data?.kpis;
 
+  const searchProjectOptions = useMemo(() => {
+    const all = options.data?.projects ?? [];
+    if (!overview.data) return all;
+    const visible = new Set(rows.map((row) => row.id));
+    return all.filter((project) => visible.has(project.id));
+  }, [options.data?.projects, overview.data, rows]);
+
   return (
-    <PageZones>
-      <PageHeader
-        title="Projects"
-        subtitle={
-          overview.data
-            ? `${integer(rows.length)} projects in view. Open one for team allocation and monthly planned hours.`
-            : "Planned effort by project from Project Track"
-        }
-      />
-
-      <FilterCard
-        filterCount={activeFilters}
-        filterTotal={FILTER_KEYS.length}
-        onReset={resetFilters}
-        resetDisabled={activeFilters === 0}
-      >
-        <div className="@container">
-        <div role="group" aria-label="Filters" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:items-end">
-          <MultiSelect
-            label="Reporting month"
-            options={(options.data?.months ?? []).map((m) => ({
-              value: String(m.key),
-              label: m.label,
-              hint: m.has_data ? undefined : "No data",
-            }))}
-            selected={months}
-            onChange={(values) => url.setValues({ months: values })}
-          />
-          <MultiSelect
-            label="Contract category"
-            options={CONTRACT_ORDER.map((c) => ({ value: c, label: c }))}
-            selected={contract}
-            onChange={(values) => url.setValues({ cc: values })}
-          />
-          <SelectField
-            label="Project coverage"
-            value={coverage}
-            options={(options.data?.coverage ?? ["All Projects"]).map((c) => ({ value: c, label: c }))}
-            onChange={(value) => url.setValues({ coverage: value === COVERAGE_DEFAULT ? null : value })}
-          />
-        </div>
-        </div>
-      </FilterCard>
-
-      <ProjectSearchCombobox
-        options={options.data?.projects ?? []}
-        search={searchText}
-        onSearchChange={setSearchText}
-        onSelect={onOpen}
-      />
-
+    <DashboardPage>
       {overview.error ? (
         <ErrorBlock message={overview.error} onRetry={overview.reload} />
       ) : (
-        <SummarySection
-          id="projects-summary-heading"
-          subtitle="Totals across the full reporting window. Other filters narrow the project table; reporting month affects row hours only."
+        <DashboardControlDeck
+          pageTitle="Projects"
+          metricsTitle="Portfolio totals"
+          filterCount={activeFilters}
+          onReset={resetFilters}
+          kpis={
+            <KpiBand label="Portfolio totals">
+              <KpiGroup title="Portfolio" columns={4} aside={<span>Full reporting window</span>}>
+                <KpiStat label="Total projects" value={kpis?.total_projects} caption="After coverage and filters" loading={!kpis} />
+                <KpiStat label="Active projects" value={kpis?.active_projects} caption="Running as of today" loading={!kpis} />
+                <KpiStat label="Projects with employees" value={kpis?.projects_with_employees} caption="At least one allocation" loading={!kpis} />
+                <KpiStat label="Employees assigned" value={kpis?.employees_assigned} caption="Distinct people" loading={!kpis} />
+              </KpiGroup>
+            </KpiBand>
+          }
         >
-          <div className="@container">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard
-              label="Total projects"
-              icon={FolderKanban}
-              value={kpis?.total_projects}
-              caption="Full reporting window"
-              loading={!kpis}
+          <>
+            <ProjectSearchCombobox
+              options={searchProjectOptions}
+              search={searchText}
+              onSearchChange={setSearchText}
+              onSelect={onOpen}
             />
-            <KpiCard
-              label="Active projects"
-              icon={Activity}
-              tone="success"
-              value={kpis?.active_projects}
-              loading={!kpis}
+            <MultiSelect
+              variant="pill"
+              label="Reporting month"
+              options={(options.data?.months ?? []).map((m) => ({
+                value: String(m.key),
+                label: m.label,
+                hint: m.has_data ? undefined : "No data",
+              }))}
+              selected={months}
+              onChange={(values) => url.setValues({ months: values })}
             />
-            <KpiCard
-              label="Projects with employees"
-              icon={UserRoundCheck}
-              tone="lavender"
-              value={kpis?.projects_with_employees}
-              loading={!kpis}
+            <MultiSelect
+              variant="pill"
+              label="Contract category"
+              options={CONTRACT_ORDER.map((c) => ({ value: c, label: c }))}
+              selected={contract}
+              onChange={(values) => url.setValues({ cc: values })}
             />
-            <KpiCard
-              label="Employees assigned"
-              icon={UsersRound}
-              value={kpis?.employees_assigned}
-              caption="Full reporting window"
-              loading={!kpis}
+            <MultiSelect
+              variant="pill"
+              selectionMode="single"
+              baselineValue={COVERAGE_DEFAULT}
+              label="Coverage"
+              options={(options.data?.coverage ?? ["All Projects"]).map((c) => ({ value: c, label: c }))}
+              selected={coverage !== COVERAGE_DEFAULT ? [coverage] : []}
+              onChange={(values) => {
+                const next = values[0];
+                if (!next || next === COVERAGE_DEFAULT) url.setValues({ coverage: null });
+                else url.setValues({ coverage: next });
+              }}
             />
-          </div>
-          </div>
-        </SummarySection>
+          </>
+        </DashboardControlDeck>
       )}
 
-      <Card
-        title="Portfolio"
-        titleId="projects-portfolio-heading"
-        subtitle="Sort columns to compare projects. Active means started on or before today and ends on or after today."
-        actions={
-          overview.data ? (
-            <span className="text-[12px] tabular-nums text-muted">
-              <span className="font-medium text-ink-soft">{integer(rows.length)}</span> {rows.length === 1 ? "project" : "projects"}
-            </span>
-          ) : undefined
-        }
-      >
-        {!overview.data && !overview.error ? (
-          <TableSkeleton rows={6} columns={9} label="Loading projects" />
-        ) : rows.length === 0 ? (
-          <EmptyBlock message="No projects match the current filters" />
+
+      <DashboardBody>
+        {bodyView === "accounts" ? (
+          <AccountUtilizationCard months={months} actions={viewSwitch} />
         ) : (
-          <PortfolioTable rows={rows} onOpen={onOpen} />
+        <TableCard
+          title="Portfolio"
+          actions={viewSwitch}
+          titleId="projects-portfolio-heading"
+          count={overview.data ? `${integer(rows.length)} ${rows.length === 1 ? "project" : "projects"}` : undefined}
+        >
+          {!overview.data && !overview.error ? (
+            <div className="p-4 sm:p-5">
+              <TableSkeleton rows={6} columns={9} label="Loading projects" />
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="p-4 sm:p-5">
+              <EmptyBlock message="No projects match the current filters" />
+            </div>
+          ) : (
+            <PortfolioTable rows={rows} onOpen={onOpen} />
+          )}
+        </TableCard>
         )}
-      </Card>
-    </PageZones>
+      </DashboardBody>
+    </DashboardPage>
   );
 }

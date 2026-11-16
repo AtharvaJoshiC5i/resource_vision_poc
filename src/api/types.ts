@@ -33,6 +33,35 @@ export interface AvailabilityOptions {
   capabilities: string[];
   grades: string[];
   locations: string[];
+  business_verticals: string[];
+  clients: string[];
+  tenures: string[];
+}
+
+/** Business Vertical (ZingHR), tenure band from date of joining, and clients in the current month. */
+export interface ProfileTags {
+  business_vertical: string | null;
+  tenure: string;
+  clients: string[];
+}
+
+export interface SkillOptions {
+  available: boolean;
+  names: string[];
+  levels: string[];
+  families: string[];
+}
+
+export interface EmployeeSearchHit {
+  key: string;
+  code: string;
+  name: string;
+  label: string;
+}
+
+export interface EmployeeSkill {
+  name: string;
+  level: string;
 }
 
 export interface AvailabilityMonth {
@@ -46,7 +75,19 @@ export interface AvailabilityMonth {
 
 export interface AvailabilityOverview {
   kpis: {
+    total_employees: number;
     employees_with_records: number;
+    employees_without_records: number;
+    /** Planned employee-months over the whole window, by the status of each employee-month. */
+    employee_months: {
+      total: number;
+      fully_available: number;
+      partially_available: number;
+      fully_committed: number;
+      over_allocated: number;
+      unverified: number;
+    };
+    /** Distinct employees who had the status in at least one month. */
     fully_available: number;
     partially_available: number;
     fully_committed: number;
@@ -72,7 +113,14 @@ export type MatrixCell =
 
 export interface AvailabilityMatrix {
   months: { key: number; label: string }[];
-  rows: { key: string; code: string; name: string; hr_match: boolean; cells: MatrixCell[] }[];
+  rows: ({
+    key: string;
+    code: string;
+    name: string;
+    hr_match: boolean;
+    location: string | null;
+    cells: MatrixCell[];
+  } & ProfileTags)[];
   page: number;
   pages: number;
   page_size: number;
@@ -94,6 +142,10 @@ export interface DirectoryRow {
   capability: string | null;
   location: string | null;
   hr_match: boolean;
+  business_vertical: string | null;
+  tenure: string;
+  /** Clients in the selected month. */
+  clients: string[];
   /** Status for the current month; null when the employee has no record that month. */
   status: AvailabilityStatus | null;
   projects: number | null;
@@ -178,6 +230,10 @@ export interface EmployeeDetail {
     employment_type: string | null;
     joining_date: string | null;
     email: string | null;
+    business_vertical: string | null;
+    tenure: string;
+    tenure_months: number | null;
+    current_clients: string[];
   };
   months: EmployeeMonthRow[];
   totals: {
@@ -191,6 +247,7 @@ export interface EmployeeDetail {
     rows: AllocationRow[];
     totals: { planned_hours: number | null; unresolved_hours: number | null };
   };
+  skills: EmployeeSkill[] | null;
 }
 
 export interface ProjectOptions {
@@ -220,6 +277,19 @@ export interface ProjectsOverview {
     employees_assigned: number;
   };
   rows: ProjectRow[];
+}
+
+export interface AccountUtilization {
+  months: { key: number; label: string }[];
+  totals: { accounts: number; employees: number; planned_hours: number | null };
+  rows: {
+    client: string;
+    employees: number;
+    projects: number;
+    planned_hours: number | null;
+    share: number | null;
+    months: { month: number; label: string; planned_hours: number | null }[];
+  }[];
 }
 
 export interface ProjectDetail {

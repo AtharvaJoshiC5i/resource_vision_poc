@@ -4,13 +4,14 @@ import { BookOpen, CircleDashed, X } from "lucide-react";
 import type { AvailabilityStatus } from "../../api/types";
 import { useDialogFocus } from "../../hooks/useDialogFocus";
 import { StatusBadge } from "../ui/primitives";
+import { Tooltip } from "../ui/Tooltip";
 import { STATUS_ORDER } from "../../lib/status";
 
 const STATUS_COPY: Record<AvailabilityStatus, { summary: string; detail: string }> = {
   "Fully Available": {
-    summary: "No verified planned hours this month",
+    summary: "Zero planned hours recorded this month",
     detail:
-      "Allocation exists with verified zero planned hours, so full monthly capacity remains. Uncommon when only non-zero efforts are recorded.",
+      "Project Track holds an explicit zero (or only zero-effort rows) for an employee with HR capacity, so the full 176 h remains. When hours are allotted later, remaining hours drop accordingly. A month with no record at all is shown as No record, never as available.",
   },
   "Partially Available": {
     summary: "Some capacity remains after planned hours",
@@ -26,9 +27,9 @@ const STATUS_COPY: Record<AvailabilityStatus, { summary: string; detail: string 
     detail: "Remaining hours are negative after planned effort is applied against the 176 h capacity.",
   },
   Unverified: {
-    summary: "Planned hours are zero for the month",
+    summary: "Hours or capacity cannot be established",
     detail:
-      "When effort recorded for the month is 0 h, availability cannot be classified as available, committed, or over-allocated, so the status is Unverified.",
+      "Used when the month has records needing review (invalid effort, conflicting duplicates, manual overrides), or when the employee has no HR match or valid employment dates, so capacity cannot be established. Zero planned hours are Fully Available.",
   },
 };
 
@@ -36,7 +37,7 @@ const NO_RECORD = {
   title: "No record",
   summary: "No Project Track row for this employee in the month",
   detail:
-    "The month has data in scope, but this person has no allocation row (shown as — in the matrix). Different from a blank month with no Project Track data.",
+    "The month has data in scope, but this person has no allocation row (shown as a short dash in the matrix). Different from a blank month with no Project Track data.",
 };
 
 function GuideStatusCard({
@@ -49,7 +50,7 @@ function GuideStatusCard({
   detail: string;
 }) {
   return (
-    <article className="rounded-xl border border-hairline bg-surface p-4 shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.03]">
+    <article className="rv-frame rounded-xl p-4">
       {status ? (
         <StatusBadge status={status} />
       ) : (
@@ -90,7 +91,7 @@ export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClo
       <button
         type="button"
         aria-label="Close guide"
-        className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
+        className="rv-backdrop absolute inset-0 bg-ink/40 backdrop-blur-[2px]"
         onClick={onClose}
       />
       <div
@@ -100,11 +101,11 @@ export function AvailabilityGuidePanel({ open, onClose }: { open: boolean; onClo
         id={dialogId}
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative flex max-h-[min(90dvh,40rem)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-hairline bg-canvas pb-[env(safe-area-inset-bottom)] shadow-(--shadow-popover) outline-none sm:max-w-lg sm:rounded-2xl"
+        className="rv-dialog relative flex max-h-[min(90dvh,40rem)] w-full max-w-md flex-col overflow-hidden rounded-t-2xl border border-hairline bg-canvas pb-[env(safe-area-inset-bottom)] shadow-(--shadow-popover) outline-none sm:max-w-lg sm:rounded-2xl"
       >
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-hairline bg-surface px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-base font-medium text-ink">
+            <h2 id={titleId} className="text-base font-medium tracking-[-0.011em] text-ink">
               Availability statuses
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-muted">
@@ -155,11 +156,10 @@ export function AvailabilityGuideTrigger({
   expanded: boolean;
   onOpen: () => void;
 }) {
-  return (
+  const control = (
     <button
       type="button"
       onClick={onOpen}
-      title={expanded ? undefined : "Availability statuses"}
       className={`flex w-full items-center gap-2.5 rounded-lg text-xs font-medium text-muted transition-colors hover:bg-canvas hover:text-ink ${
         expanded ? "h-9 touch:h-11 px-2.5" : "mx-auto h-9 w-9 touch:h-11 touch:w-11 justify-center px-0"
       }`}
@@ -168,4 +168,6 @@ export function AvailabilityGuideTrigger({
       {expanded && <span className="truncate">Availability statuses</span>}
     </button>
   );
+
+  return expanded ? control : <Tooltip content="Availability statuses">{control}</Tooltip>;
 }

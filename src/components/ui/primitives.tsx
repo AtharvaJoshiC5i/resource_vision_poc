@@ -1,26 +1,30 @@
-import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from "react";
-import { useScrollEdges } from "../../hooks/useScrollEdges";
-import { tableFrameClass, tableFrameNestedClass } from "./tableClasses";
-import { CircleAlert, UserRoundX, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { tableFrameClass } from "./tableClasses";
+import { CircleAlert, SearchX, UserRoundX } from "lucide-react";
+
+import { TablePagination } from "./TablePagination";
+
+export { TablePagination } from "./TablePagination";
 
 import type { AvailabilityStatus } from "../../api/types";
-import { EM_DASH, integer } from "../../lib/format";
+import { EMPTY, integer } from "../../lib/format";
 import { STATUS_STYLE } from "../../lib/status";
+import { Tooltip } from "./Tooltip";
 
 export const fieldClass =
-  "h-8 touch:h-10 w-full rounded-lg border border-hairline bg-raised px-2.5 text-sm touch:text-[1rem] text-ink shadow-[inset_0_1px_0_color-mix(in_srgb,var(--color-surface)_80%,transparent)] placeholder:text-muted transition-[border-color,box-shadow,background-color] hover:border-border focus:border-primary focus:bg-surface focus:outline-none focus-visible:outline-none focus:ring-2 focus:ring-primary/12 disabled:bg-canvas disabled:text-muted disabled:shadow-none";
+  "rv-field h-8 touch:h-10 w-full rounded-lg bg-surface px-2.5 text-sm touch:text-[1rem] text-ink placeholder:text-muted transition-[box-shadow,background-color] focus:outline-none focus-visible:outline-none disabled:bg-canvas disabled:text-muted disabled:shadow-none";
 
-export const labelClass = "mb-1.5 block text-xs font-medium text-muted";
+export const labelClass = "rv-field-label mb-1.5 block text-xs font-medium text-ink-soft";
 
 /** Secondary button: bordered, neutral. */
 export const buttonClass =
-  "inline-flex h-8 touch:h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-hairline bg-surface px-2.5 text-xs font-medium text-ink shadow-(--shadow-card) transition-[background-color,border-color,box-shadow] hover:border-border hover:bg-canvas active:shadow-none disabled:opacity-40 disabled:hover:bg-surface disabled:shadow-none";
+  "rv-btn-secondary inline-flex h-8 touch:h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-surface px-3 text-xs font-medium text-ink transition-[background-color,box-shadow,transform] hover:bg-canvas/70 active:translate-y-px active:shadow-none disabled:opacity-40 disabled:hover:bg-surface disabled:active:translate-y-0 disabled:shadow-none";
 
 /** Tertiary button: text only, for actions that sit inside a card header. */
 export const quietButtonClass =
-  "inline-flex h-8 touch:h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-xs font-medium text-primary transition-colors hover:bg-primary-soft hover:text-purple-indigo disabled:text-muted disabled:hover:bg-transparent";
+  "inline-flex h-8 touch:h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary-soft hover:text-purple-indigo disabled:text-muted disabled:hover:bg-transparent";
 
-/** In-card subsection label — sentence case, muted. */
+/** In-card subsection label: sentence case, muted. */
 export const sectionEyebrowClass = "rv-eyebrow";
 
 export const insetPanelClass = "rv-inset-panel";
@@ -72,17 +76,19 @@ export function Card({
 }) {
   return (
     <section
-      className={`rounded-xl border border-card-border bg-surface p-4 shadow-(--shadow-card) ring-1 ring-inset ring-ink/[0.05] sm:p-5 short:p-3 ${className}`}
+      className={`rv-card rv-frame rounded-xl p-4 sm:p-5 short:p-3 ${className}`}
     >
       {(title || actions) && (
-        <header className="mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <header className="rv-card__header mb-4 flex flex-wrap items-start justify-between gap-x-3 gap-y-2 compact-height:mb-3">
           <div className="min-w-0">
             {title && (
-              <h2 id={titleId} className="text-base font-medium leading-snug text-ink">
+              <h2 id={titleId} className="rv-card__title text-base font-medium leading-snug text-ink">
                 {title}
               </h2>
             )}
-            {subtitle && <p className="mt-0.5 max-w-3xl text-xs leading-relaxed text-muted">{subtitle}</p>}
+            {subtitle && (
+              <p className="rv-card__subtitle mt-1 max-w-3xl text-xs leading-relaxed text-muted">{subtitle}</p>
+            )}
           </div>
           {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
         </header>
@@ -98,19 +104,25 @@ export function SectionHeader({
   title,
   subtitle,
   actions,
+  compact = false,
 }: {
   id?: string;
   title: string;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <div className="mb-2.5 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+    <div
+      className={`mb-2.5 flex flex-wrap items-end justify-between gap-x-3 gap-y-1 ${compact ? "rv-section-header--compact" : ""}`}
+    >
       <div className="min-w-0">
-        <h2 id={id} className="text-base font-medium leading-snug text-ink">
-          {title}
-        </h2>
-        {subtitle && <p className="text-xs leading-relaxed text-muted">{subtitle}</p>}
+        {title ? (
+          <h2 id={id} className="rv-section-header__title text-base font-medium leading-snug text-ink">
+            {title}
+          </h2>
+        ) : null}
+        {subtitle && <p className="rv-section-header__subtitle mt-0.5 text-xs leading-relaxed text-muted">{subtitle}</p>}
       </div>
       {actions}
     </div>
@@ -132,74 +144,51 @@ export function StatusChip({ status, size = "sm" }: { status: AvailabilityStatus
   );
 }
 
+/**
+ * Availability status badge: a neutral chip carrying the status letter tile (the product's status
+ * mark) and the label. Colour lives only in the tile, so a column of badges stays calm to read.
+ */
 export function StatusBadge({ status }: { status: AvailabilityStatus }) {
   const style = STATUS_STYLE[status];
   return (
-    <span
-      title={status}
-      className="inline-flex h-[1.375rem] max-w-full items-center gap-1 overflow-hidden whitespace-nowrap rounded-md pl-0.5 pr-1.5 text-xs font-medium"
-      style={{ backgroundColor: style.bg, color: style.fg }}
-    >
-      <span
-        aria-hidden="true"
-        className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-sm bg-surface/70 text-[10px] font-semibold leading-none"
-      >
-        {style.letter}
+    <Tooltip content={status}>
+      <span className="rv-tag rv-tag--status max-w-full overflow-hidden">
+        <span
+          aria-hidden="true"
+          className="grid h-5 w-5 shrink-0 place-items-center rounded-[5px] text-[11px] font-semibold leading-none"
+          style={{ backgroundColor: style.bg, color: style.fg }}
+        >
+          {style.letter}
+        </span>
+        <span className="truncate">{status}</span>
       </span>
-      <span className="truncate">{status}</span>
-    </span>
-  );
-}
-
-/** Month-by-month columns scaled to the series maximum. Null months show as a baseline tick. */
-export function Sparkbars({ values, color }: { values: (number | null)[]; color: string }) {
-  const bar = 4;
-  const gap = 2;
-  const height = 32;
-  const width = Math.max(1, values.length * (bar + gap) - gap);
-  const max = Math.max(0, ...values.filter((v): v is number => v !== null));
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className="h-8 w-24 shrink-0"
-      aria-hidden="true"
-    >
-      {values.map((v, i) => {
-        const x = i * (bar + gap);
-        if (v === null || max === 0) {
-          return <rect key={i} x={x} y={height - 1} width={bar} height={1} fill="var(--color-border)" />;
-        }
-        const h = Math.max(1.5, (v / max) * height);
-        return <rect key={i} x={x} y={height - h} width={bar} height={h} rx={1} fill={color} />;
-      })}
-    </svg>
+    </Tooltip>
   );
 }
 
 export type KpiTone = "primary" | "success" | "warning" | "error" | "lavender" | "neutral";
 
 /**
- * Summary count in the same chrome as other inset panels. Icons are muted wayfinding only.
- * `status` / `tone` are accepted for call-site consistency but do not recolour the tile.
+ * Summary count: a label, a figure and an optional footer. A status count carries the product's
+ * status letter tile (the same mark as the matrix and legend); other counts carry no icon.
+ * `tone` is accepted for call-site consistency and does not recolour the tile.
  */
 export function KpiCard({
   label,
   value,
   unit,
-  icon: Icon,
-  tone = "primary",
   status,
   emphasis,
   caption,
   loading = false,
   selected = false,
   onClick,
+  dense = false,
+  className = "",
 }: {
   label: string;
   value: number | string | null | undefined;
   unit?: string;
-  icon: LucideIcon;
   tone?: KpiTone;
   status?: AvailabilityStatus;
   emphasis?: string;
@@ -207,24 +196,34 @@ export function KpiCard({
   loading?: boolean;
   selected?: boolean;
   onClick?: () => void;
+  dense?: boolean;
+  className?: string;
 }) {
-  void tone;
-  void status;
   const interactive = Boolean(onClick);
-  const display = typeof value === "number" ? integer(value) : (value ?? EM_DASH);
-  const showUnit = Boolean(unit) && display !== EM_DASH;
+  const display = typeof value === "number" ? integer(value) : (value ?? EMPTY);
+  const showUnit = Boolean(unit) && display !== EMPTY;
   const hasFooter = emphasis != null || caption != null;
 
-  const shellClass = ["rv-kpi-card", hasFooter ? "rv-kpi-card--with-footer" : "", selected ? "rv-kpi-card--selected" : ""]
+  const shellClass = [
+    "rv-kpi-card",
+    hasFooter ? "rv-kpi-card--with-footer" : "",
+    dense ? "rv-kpi-card--dense" : "",
+    selected ? "rv-kpi-card--selected" : "",
+    className,
+  ]
     .filter(Boolean)
     .join(" ");
 
+  const labelNode = (
+    <span className={`rv-kpi-card__label ${selected ? "text-ink-soft" : ""}`}>
+      {status ? <StatusChip status={status} /> : null}
+      <span className="min-w-0 leading-snug">{label}</span>
+    </span>
+  );
+
   const content = (
     <>
-      <span title={label} className={`rv-kpi-card__label ${selected ? "text-ink-soft" : ""}`}>
-        <Icon aria-hidden="true" className="rv-kpi-card__glyph" strokeWidth={1.75} />
-        <span className="min-w-0 leading-snug">{label}</span>
-      </span>
+      <Tooltip content={label}>{labelNode}</Tooltip>
 
       {loading ? (
         <div aria-hidden="true">
@@ -259,6 +258,7 @@ export function KpiCard({
         type="button"
         onClick={onClick}
         aria-pressed={selected}
+        data-status={status}
         className={`${shellClass} outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas`}
       >
         {content}
@@ -266,7 +266,11 @@ export function KpiCard({
     );
   }
 
-  return <div className={shellClass}>{content}</div>;
+  return (
+    <div className={shellClass} data-status={status}>
+      {content}
+    </div>
+  );
 }
 
 export function InfoTile({ value, label }: { value: ReactNode; label: string }) {
@@ -288,54 +292,56 @@ export function MetaField({ label, value, className = "" }: { label: string; val
   );
 }
 
+/**
+ * Category badge (e.g. project status): neutral chip with a coloured dot, after Untitled UI's
+ * "modern" badge. `fg` colours the dot; `bg` is kept for call-site compatibility.
+ */
 export function Pill({
   children,
-  bg,
   fg,
   wrap = false,
 }: {
   children: ReactNode;
-  bg: string;
+  bg?: string;
   fg: string;
   /** Lets long values wrap inside narrow table columns. */
   wrap?: boolean;
 }) {
-  const style: CSSProperties = { backgroundColor: bg, color: fg };
   return (
     <span
-      className={`rv-chip border-transparent shadow-none ${wrap ? "min-h-6 py-0.5 leading-4 break-words" : "h-6 whitespace-nowrap"}`}
-      style={style}
+      className={`rv-tag max-w-full ${wrap ? "rv-tag--wrap" : "rv-tag--nowrap"}`}
     >
+      <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: fg }} />
       {children}
     </span>
   );
 }
 
-/** HR master data not linked to ZingHR — inline note, not a competing pill. */
+/** HR master data not linked to ZingHR: inline note, not a competing pill. */
 export function HrMatchFlag({ className = "" }: { className?: string }) {
   return (
-    <span
-      className={`inline-flex max-w-full items-center gap-1 text-xs leading-none text-muted ${className}`}
-      title="Employee record is not matched to ZingHR"
-    >
-      <UserRoundX aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-warning-ink/80" strokeWidth={1.75} />
-      <span className="min-w-0 truncate text-[11px] text-ink-soft">No HR match</span>
-    </span>
+    <Tooltip content="Employee record is not matched to ZingHR">
+      <span
+        className={`inline-flex max-w-full items-center gap-1 text-xs leading-none text-muted ${className}`}
+      >
+        <UserRoundX aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-warning-ink/80" strokeWidth={1.75} />
+        <span className="min-w-0 truncate text-[11px] text-ink-soft">No HR match</span>
+      </span>
+    </Tooltip>
   );
 }
 
 /** Contextual info flag for non-HR messages (e.g. filter scope). */
 export function FlagBadge({ children }: { children: ReactNode }) {
-  const title = typeof children === "string" ? children : undefined;
-  return (
-    <span
-      className="inline-flex max-w-xs items-start gap-1.5 rounded-md bg-canvas px-2 py-1 text-xs leading-snug text-muted ring-1 ring-inset ring-hairline"
-      title={title}
-    >
+  const hint = typeof children === "string" ? children : undefined;
+  const badge = (
+    <span className="inline-flex max-w-xs items-start gap-1.5 text-xs leading-snug text-muted">
       <CircleAlert aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0 opacity-80" strokeWidth={1.75} />
       <span className="min-w-0">{children}</span>
     </span>
   );
+  if (!hint) return badge;
+  return <Tooltip content={hint}>{badge}</Tooltip>;
 }
 
 /** Loading state shaped like the table it stands in for: header row, then rows of cell bars. */
@@ -354,7 +360,7 @@ export function TableSkeleton({
     <div role="status" aria-live="polite" aria-label={label} className={tableFrameClass}>
       <div
         aria-hidden="true"
-        className="flex h-10 items-center gap-6 border-b border-hairline bg-[var(--rv-table-header-bg)] px-4"
+        className="flex h-11 items-center gap-6 border-b border-card-border bg-surface px-4"
       >
         {Array.from({ length: columns }, (_, col) => (
           <span key={col} className="skeleton block h-2.5" style={{ width: `${col === 0 ? 16 : 7}%` }} />
@@ -364,7 +370,7 @@ export function TableSkeleton({
         <div
           key={row}
           aria-hidden="true"
-          className="flex h-12 items-center gap-6 border-b border-hairline bg-surface px-4 last:border-b-0"
+          className="flex h-13 items-center gap-6 border-b border-hairline bg-surface px-4 last:border-b-0"
         >
           {Array.from({ length: columns }, (_, col) => (
             <span key={col} className="skeleton block h-3" style={{ width: `${width(row, col)}%` }} />
@@ -389,9 +395,11 @@ export function ErrorBlock({ message, onRetry }: { message: string; onRetry?: ()
   return (
     <div
       role="alert"
-      className="flex gap-3 rounded-xl border border-error/25 bg-error-soft px-4 py-4 shadow-(--shadow-card) ring-1 ring-inset ring-error/10 sm:px-5"
+      className="flex gap-3 rounded-xl border border-error/20 bg-error-soft/70 px-4 py-4 sm:px-5"
     >
-      <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-error-ink" />
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface text-error-ink shadow-(--shadow-control)">
+        <CircleAlert aria-hidden="true" className="h-4 w-4" />
+      </span>
       <div className="min-w-0 text-sm">
         <p className="font-medium text-ink">Data could not be loaded</p>
         <p className="mt-0.5 break-words text-ink-soft">{message}</p>
@@ -407,8 +415,11 @@ export function ErrorBlock({ message, onRetry }: { message: string; onRetry?: ()
 
 export function EmptyBlock({ message }: { message: string }) {
   return (
-    <div className="rounded-xl border border-dashed border-hairline bg-canvas/50 px-6 py-10 text-center text-sm text-muted">
-      {message}
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-card-border bg-canvas/40 px-6 py-12 text-center">
+      <span className="grid h-10 w-10 place-items-center rounded-full bg-canvas text-muted">
+        <SearchX aria-hidden="true" className="h-4.5 w-4.5" />
+      </span>
+      <p className="max-w-sm text-sm text-ink-soft">{message}</p>
     </div>
   );
 }
@@ -417,17 +428,29 @@ export function PageHeader({
   title,
   subtitle,
   children,
+  compact = false,
 }: {
   title: string;
   subtitle?: string;
   children?: ReactNode;
+  compact?: boolean;
 }) {
   return (
-    <header className="border-b border-hairline pb-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-xl font-medium leading-snug tracking-tight text-ink sm:text-2xl">{title}</h1>
-          {subtitle && <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted sm:text-sm">{subtitle}</p>}
+    <header
+      className={`rv-page-header rv-rule-b pb-4 compact-height:pb-3 ${compact ? "rv-page-header--compact" : ""}`}
+    >
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between lg:gap-4 compact-height:gap-2">
+        <div className="min-w-0 flex-1">
+          <h1 className="rv-page-header__title text-xl font-semibold leading-snug text-ink sm:text-2xl compact-height:text-lg">
+            {title}
+          </h1>
+          {subtitle && (
+            <p
+              className={`rv-page-header__subtitle mt-1 max-w-2xl text-xs leading-relaxed text-muted sm:text-sm`}
+            >
+              {subtitle}
+            </p>
+          )}
         </div>
         {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
       </div>
@@ -441,57 +464,17 @@ export function Pagination({
   total,
   pageSize,
   onChange,
+  itemLabel = "employees",
 }: {
   page: number;
   pages: number;
   total: number;
   pageSize: number;
   onChange: (page: number) => void;
+  itemLabel?: string;
 }) {
-  if (pages <= 1) return null;
-  const from = (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
-  return (
-    <nav
-      aria-label="Pagination"
-      className="rv-inset-panel mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted tabular-nums py-2.5"
-    >
-      <span>
-        <span className="font-medium text-ink-soft">
-          {integer(from)}&ndash;{integer(to)}
-        </span>{" "}
-        of {integer(total)} employees
-      </span>
-      <span className="flex items-center gap-2">
-        <button type="button" className={buttonClass} disabled={page <= 1} onClick={() => onChange(page - 1)}>
-          Previous
-        </button>
-        <span aria-live="polite" className="min-w-24 text-center">
-          Page {page} of {pages}
-        </span>
-        <button type="button" className={buttonClass} disabled={page >= pages} onClick={() => onChange(page + 1)}>
-          Next
-        </button>
-      </span>
-    </nav>
-  );
+  return <TablePagination page={page} pages={pages} total={total} pageSize={pageSize} onChange={onChange} itemLabel={itemLabel} />;
 }
 
-export function TableFrame({
-  nested = false,
-  className = "",
-  children,
-  ...rest
-}: ComponentPropsWithoutRef<"div"> & { nested?: boolean }) {
-  const ref = useScrollEdges();
-  const frameClass = nested ? tableFrameNestedClass : tableFrameClass;
-  return (
-    <div ref={ref} className={[frameClass, className].filter(Boolean).join(" ")} {...rest}>
-      {children}
-    </div>
-  );
-}
-
-/** Trailing "open" chevron: appears on hover or keyboard focus, always visible on touch screens. */
-export const rowChevronClass =
-  "h-4 w-4 text-muted opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 touch:opacity-100";
+/** Trailing "open" chevron: always visible (hover-only actions hide the next step), stronger on hover. */
+export const rowChevronClass = "h-4 w-4 transition-colors";

@@ -44,8 +44,8 @@ function ChartTooltip({ active, payload, series }: TooltipProps) {
   const row = payload?.[0]?.payload;
   if (!active || !row) return null;
   return (
-    <div className="min-w-52 rounded-lg bg-surface px-3 py-2.5 text-xs shadow-(--shadow-popover)">
-      <p className="mb-1.5 font-medium text-ink">{row.label}</p>
+    <div className="min-w-56 rounded-xl bg-surface px-3.5 py-3 text-xs shadow-(--shadow-popover)">
+      <p className="mb-2 font-medium text-ink">{row.label}</p>
       {!row.has_data ? (
         <p className="text-muted">No Project Track data for this month</p>
       ) : (
@@ -59,7 +59,7 @@ function ChartTooltip({ active, payload, series }: TooltipProps) {
               <span className="font-medium tabular-nums text-ink">{integer(row.values[s.key] ?? 0)}</span>
             </p>
           ))}
-          <p className="mt-1.5 flex justify-between border-t border-hairline pt-1.5 font-medium text-ink">
+          <p className="mt-2 flex justify-between border-t border-hairline pt-2 font-medium text-ink">
             <span>Employees</span>
             <span className="tabular-nums">{integer(row.total)}</span>
           </p>
@@ -80,7 +80,7 @@ export function MonthlyStackedChart({ title, months, series }: Props) {
 
   return (
     <figure aria-label={title} className="m-0">
-      <ul className="mb-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft">
+      <ul className="rv-chart-legend mb-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-soft compact-height:mb-2">
         {series.map((s) => (
           <li key={s.key} className="flex items-center gap-2">
             <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
@@ -91,7 +91,7 @@ export function MonthlyStackedChart({ title, months, series }: Props) {
       {/* Below 640px every month keeps a readable slot and the chart scrolls sideways. */}
       <div className="overflow-x-auto overscroll-x-contain" aria-hidden="true">
       <div
-        className="h-60 min-w-(--chart-min) sm:h-64 sm:min-w-0"
+        className="rv-chart-plot h-60 min-w-(--chart-min) sm:h-64 sm:min-w-0 compact-height:h-52 compact-height:sm:h-60"
         style={{ "--chart-min": `${Math.max(320, months.length * 36 + 64)}px` } as CSSProperties}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -140,8 +140,8 @@ export function MonthlyStackedChart({ title, months, series }: Props) {
               <LabelList
                 dataKey="totalLine"
                 position="top"
-                fontSize={10}
-                fontWeight={500}
+                fontSize={11}
+                fontWeight={600}
                 fill="var(--color-ink-soft)"
                 fontFamily={CHART_FONT}
               />
