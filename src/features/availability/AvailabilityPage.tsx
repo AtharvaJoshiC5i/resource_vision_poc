@@ -174,7 +174,7 @@ export function AvailabilityPage() {
             title="Trends"
             subtitle="Monthly distribution of the filtered population"
           />
-          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <Card title="Employees by availability status">
               {overview.error ? null : !overview.data ? (
                 <LoadingBlock height={320} label="Loading availability chart" />

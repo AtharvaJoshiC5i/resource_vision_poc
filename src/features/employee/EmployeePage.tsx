@@ -74,7 +74,7 @@ function MonthlyTable({ detail }: { detail: EmployeeDetail }) {
   );
 
   return (
-    <TableScroll label="Monthly allocation and availability" className="rv-emp-trend-table-scroll xl:max-h-[min(24rem,46dvh)]">
+    <TableScroll label="Monthly allocation and availability" className="rv-emp-trend-table-scroll lg:max-h-[min(24rem,46dvh)]">
       <table className={`${tableClassDense} rv-emp-trend-table w-full table-fixed`}>
         <colgroup>
           <col className="rv-emp-trend-col--month" />
@@ -409,7 +409,7 @@ function EmployeeWorkPanel({
   const totalPlanned = detail.totals.planned_hours;
 
   return (
-    <div className="rv-emp-work-panel grid min-w-0 grid-cols-1 items-start xl:grid-cols-2">
+    <div className="rv-emp-work-panel grid min-w-0 grid-cols-1 items-start lg:grid-cols-2">
       <AvailabilityOverTime detail={detail} capacity={capacity} />
       <TableCard
         className="rv-emp-projects-card"
@@ -568,7 +568,7 @@ function ProjectsTable({ detail }: { detail: EmployeeDetail }) {
   }
 
   return (
-    <TableScroll label="Projects for this employee" className="min-w-0 xl:max-h-[min(26rem,48dvh)]">
+    <TableScroll label="Projects for this employee" className="min-w-0 lg:max-h-[min(26rem,48dvh)]">
       <table className={`${tableClassDense} rv-emp-projects-table`}>
         <colgroup>
           <col className="rv-emp-projects-col--project" />

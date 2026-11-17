@@ -857,7 +857,7 @@ function ProjectWorkPanel({ detail }: { detail: ProjectDetail }) {
 
   return (
     <section aria-label={`Team and effort for ${windowLabel}`}>
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2 [&>*]:h-full">
+      <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2 [&>*]:h-full">
         <TableCard
           title="Team allocation"
           titleId="project-team-heading"

@@ -758,7 +758,7 @@ button.rv-kpi-card:hover:not(:disabled) {
   padding-bottom: 0.625rem;
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 64rem) {
   .rv-density .rv-control-deck__filter-note {
     margin-top: 0;
   }
@@ -1504,7 +1504,7 @@ button.rv-kpi-card:hover:not(:disabled) {
   gap: 1rem;
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 64rem) {
   .rv-emp-work-panel {
     gap: 1.25rem;
   }
