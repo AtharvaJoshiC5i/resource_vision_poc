@@ -139,7 +139,7 @@ function PortfolioTable({ rows, onOpen }: { rows: ProjectRow[]; onOpen: (id: str
     </ul>
 
     <TableScroll className="hidden md:block" label="Project portfolio">
-      <table className={`${tableClassInteractive} min-w-[920px]`}>
+      <table className={`${tableClassInteractive} min-w-[57.5rem]`}>
         <thead>
           <tr>
             {TABLE_COLUMNS.map((col, colIndex) => {

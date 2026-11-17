@@ -11,3 +11,12 @@ export const PROJECT_TEAM_VIEWPORT =
 /** Shared scroll region when Projects and Availability sit side by side on employee detail. */
 export const EMPLOYEE_WORK_PANEL_SCROLL =
   "overflow-x-auto xl:max-h-[min(22rem,42dvh)] xl:overflow-y-auto";
+/**
+ * Scale a design size given in px at the 16px root to the current root font size, so sizes set in
+ * JavaScript (hover cards, popover lists) shrink with the rest of the UI on smaller laptops.
+ */
+export function remPx(px: number): number {
+  if (typeof window === "undefined") return px;
+  const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  return Math.round((px * root) / 16);
+}

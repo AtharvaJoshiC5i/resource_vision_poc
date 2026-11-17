@@ -28,6 +28,7 @@ import { tenureLabel } from "../../lib/tags";
 import { STATUS_ORDER, STATUS_STYLE, projectStatusTone } from "../../lib/status";
 import { DashboardPage, DetailChrome } from "../../components/layout/pageZones";
 import { EmployeeDirectory } from "./EmployeeDirectory";
+import { remPx } from "../../lib/viewport";
 
 function isStatus(value: string | null): value is AvailabilityStatus {
   return value !== null && value in STATUS_STYLE;
@@ -1175,7 +1176,7 @@ function MonthCard({
       role="tooltip"
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      style={{ left: position.left, top: position.top, width: CARD_WIDTH, maxHeight: position.maxHeight }}
+      style={{ left: position.left, top: position.top, width: remPx(CARD_WIDTH), maxHeight: position.maxHeight }}
       className={`rv-popover fixed z-[60] flex flex-col overflow-hidden rounded-2xl bg-surface shadow-(--shadow-popover) ${
         position.side === "right" ? "origin-top-left" : "origin-top-right"
       }`}
@@ -1256,7 +1257,7 @@ function MonthCard({
                 <li key={p.id} className="flex gap-3 rounded-lg px-2 py-2.5">
                   <span
                     aria-hidden="true"
-                    className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md bg-canvas text-[11px] font-semibold tabular-nums text-muted"
+                    className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md bg-canvas text-[0.6875rem] font-semibold tabular-nums text-muted"
                   >
                     {i + 1}
                   </span>
@@ -1276,14 +1277,14 @@ function MonthCard({
                           style={{ width: total > 0 ? `${Math.max(3, ((p.planned ?? 0) / total) * 100)}%` : "0%" }}
                         />
                       </div>
-                      <span className="w-9 shrink-0 text-right text-[11px] font-medium tabular-nums text-muted">
+                      <span className="w-9 shrink-0 text-right text-[0.6875rem] font-medium tabular-nums text-muted">
                         {shareOfMonth(p.planned, total)}
                       </span>
                     </div>
                     {p.unresolved !== null && p.unresolved > 0 ? (
-                      <p className="mt-1 text-[11px] font-medium tabular-nums text-warning-ink">{hours(p.unresolved)} h to review</p>
+                      <p className="mt-1 text-[0.6875rem] font-medium tabular-nums text-warning-ink">{hours(p.unresolved)} h to review</p>
                     ) : p.subProjects > 1 ? (
-                      <p className="mt-1 text-[11px] text-muted">{p.subProjects} sub-projects</p>
+                      <p className="mt-1 text-[0.6875rem] text-muted">{p.subProjects} sub-projects</p>
                     ) : null}
                   </div>
                   <span className="shrink-0 pt-0.5 text-sm font-semibold tabular-nums text-ink">
@@ -1331,7 +1332,7 @@ function MonthTile({
 }) {
   const [name, year] = month.label.split(" ");
   const style = month.status ? STATUS_STYLE[month.status] : null;
-  const { ref, position, show, hide, toggle, cardId } = useHoverCard<HTMLButtonElement>(CARD_WIDTH, CARD_MAX_HEIGHT);
+  const { ref, position, show, hide, toggle, cardId } = useHoverCard<HTMLButtonElement>(remPx(CARD_WIDTH), remPx(CARD_MAX_HEIGHT));
 
   const load = month.planned_hours !== null && capacity > 0 ? Math.min(1, month.planned_hours / capacity) : 0;
   const over = month.planned_hours !== null && month.planned_hours > capacity;
@@ -1502,7 +1503,7 @@ function EmployeeAvailability({ detail, capacity }: { detail: EmployeeDetail; ca
         <span className="rv-emp-availability__foot-hint">
           <span
             aria-hidden="true"
-            className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-canvas/90 px-1 text-[10px] font-semibold text-ink-soft"
+            className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-canvas/90 px-1 text-[0.625rem] font-semibold text-ink-soft"
           >
             n
           </span>

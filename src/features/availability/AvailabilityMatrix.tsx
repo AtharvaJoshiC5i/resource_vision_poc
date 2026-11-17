@@ -62,7 +62,7 @@ function MatrixEmployeeIdentity({ row }: { row: MatrixRow }) {
           <Tooltip content={`Open ${row.name} in Employee 360`}>
             <Link
               to={`/employee?emp=${encodeURIComponent(row.key)}`}
-              className="rv-matrix-employee__name block text-[13px] font-medium leading-[1.35] text-ink transition-colors hover:text-primary"
+              className="rv-matrix-employee__name block text-[0.8125rem] font-medium leading-[1.35] text-ink transition-colors hover:text-primary"
             >
               {row.name}
             </Link>
@@ -87,7 +87,7 @@ function MatrixEmployeeIdentity({ row }: { row: MatrixRow }) {
 function TenureBadge() {
   return (
     <Tooltip content={`Fresher: ${TENURE_HINT.Fresher}`}>
-      <span className="shrink-0 rounded bg-primary-soft/80 px-1 text-[10px] font-medium leading-4 text-purple-indigo">
+      <span className="shrink-0 rounded bg-primary-soft/80 px-1 text-[0.625rem] font-medium leading-4 text-purple-indigo">
         Fresher
       </span>
     </Tooltip>

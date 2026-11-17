@@ -155,7 +155,7 @@ export function StatusBadge({ status }: { status: AvailabilityStatus }) {
       <span className="rv-tag rv-tag--status max-w-full overflow-hidden">
         <span
           aria-hidden="true"
-          className="grid h-5 w-5 shrink-0 place-items-center rounded-[5px] text-[11px] font-semibold leading-none"
+          className="grid h-5 w-5 shrink-0 place-items-center rounded-[5px] text-[0.6875rem] font-semibold leading-none"
           style={{ backgroundColor: style.bg, color: style.fg }}
         >
           {style.letter}
@@ -325,7 +325,7 @@ export function HrMatchFlag({ className = "" }: { className?: string }) {
         className={`inline-flex max-w-full items-center gap-1 text-xs leading-none text-muted ${className}`}
       >
         <UserRoundX aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-warning-ink/80" strokeWidth={1.75} />
-        <span className="min-w-0 truncate text-[11px] text-ink-soft">No HR match</span>
+        <span className="min-w-0 truncate text-[0.6875rem] text-ink-soft">No HR match</span>
       </span>
     </Tooltip>
   );

@@ -92,7 +92,7 @@ export function MoreFilters({ activeCount, children }: { activeCount: number; ch
         <SlidersHorizontal aria-hidden="true" className={`h-3.5 w-3.5 ${open ? "text-primary" : "text-muted"}`} />
         {open ? "Hide additional filters" : "More filters"}
         {activeCount > 0 ? (
-          <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[11px] font-medium leading-none tabular-nums text-surface">
+          <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[0.6875rem] font-medium leading-none tabular-nums text-surface">
             {activeCount}
           </span>
         ) : (
@@ -169,7 +169,7 @@ export function DashboardControlDeck({
               <ListFilter aria-hidden="true" className="h-4 w-4 text-muted" />
               Filters
               {filterCount > 0 ? (
-                <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[11px] font-medium leading-none tabular-nums text-surface">
+                <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[0.6875rem] font-medium leading-none tabular-nums text-surface">
                   {filterCount}
                 </span>
               ) : null}

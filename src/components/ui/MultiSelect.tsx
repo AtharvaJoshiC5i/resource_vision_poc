@@ -1,4 +1,5 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { remPx } from "../../lib/viewport";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, Plus, Search, X } from "lucide-react";
 
@@ -98,7 +99,7 @@ export function MultiSelect({
       const flip =
         variant !== "pill" && below < Math.min(LIST_MAX, 200) + chrome && above > below;
       const room = flip ? above : below;
-      const width = Math.max(rect.width, 256);
+      const width = Math.max(rect.width, remPx(256));
       const anchorLeft = variant === "pill" ? rect.right - width : rect.left;
       const left = Math.max(VIEWPORT_MARGIN, Math.min(anchorLeft, window.innerWidth - width - VIEWPORT_MARGIN));
       setPlacement({
@@ -106,7 +107,7 @@ export function MultiSelect({
         width,
         top: flip ? undefined : rect.bottom + PANEL_GAP,
         bottom: flip ? window.innerHeight - rect.top + PANEL_GAP : undefined,
-        maxList: Math.max(120, Math.min(LIST_MAX, room - chrome)),
+        maxList: Math.max(120, Math.min(remPx(LIST_MAX), room - chrome)),
         above: flip,
       });
     };
@@ -225,7 +226,7 @@ export function MultiSelect({
         <span className={`truncate ${selected.length === 0 ? "text-ink-soft" : "font-medium text-ink"}`}>{summary}</span>
         <span className="flex shrink-0 items-center gap-1.5">
           {selected.length > 1 ? (
-            <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[11px] font-medium leading-none tabular-nums text-surface">
+            <span className="grid h-4.5 min-w-4.5 place-items-center rounded-full bg-primary px-1 text-[0.6875rem] font-medium leading-none tabular-nums text-surface">
               {selected.length}
             </span>
           ) : null}
@@ -433,14 +434,14 @@ export function SelectField({
       const above = rect.top - PANEL_GAP - VIEWPORT_MARGIN;
       const flip = below < Math.min(LIST_MAX, 200) + chrome && above > below;
       const room = flip ? above : below;
-      const width = Math.max(rect.width, 256);
+      const width = Math.max(rect.width, remPx(256));
       const left = Math.min(rect.left, window.innerWidth - width - VIEWPORT_MARGIN);
       setPlacement({
         left: Math.max(VIEWPORT_MARGIN, left),
         width,
         top: flip ? undefined : rect.bottom + PANEL_GAP,
         bottom: flip ? window.innerHeight - rect.top + PANEL_GAP : undefined,
-        maxList: Math.max(120, Math.min(LIST_MAX, room - chrome)),
+        maxList: Math.max(120, Math.min(remPx(LIST_MAX), room - chrome)),
         above: flip,
       });
     };

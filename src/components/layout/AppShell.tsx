@@ -58,7 +58,7 @@ function SidebarNav({
 }) {
   return (
     <nav id={id} aria-label="Primary" className="flex min-h-0 flex-1 flex-col px-2.5 pt-1">
-      {!compact ? <p className="mb-1.5 px-2.5 text-[11px] font-medium text-muted">Workspace</p> : null}
+      {!compact ? <p className="mb-1.5 px-2.5 text-[0.6875rem] font-medium text-muted">Workspace</p> : null}
       <ul className={`flex flex-col gap-0.5 ${compact ? "items-center" : ""}`}>
         {NAV.map((item) => {
           const link = (
@@ -300,7 +300,7 @@ export function AppShell() {
 
         <main
           id="main"
-          className="mx-auto w-full min-w-0 max-w-[1440px] flex-1 px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6 short:py-2"
+          className="mx-auto w-full min-w-0 max-w-[90rem] flex-1 px-3 py-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6 short:py-2"
         >
           <Outlet />
         </main>

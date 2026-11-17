@@ -2168,6 +2168,22 @@ button.rv-kpi-card:hover:not(:disabled) {
     text-size-adjust: 100%;
   }
 
+  /*
+   * Laptop scaling. Every size in the app is in rem, so the root size scales the whole UI at once.
+   * Tuned on a 15.6" laptop (about 1536 x 740 CSS px of browser viewport at 125% Windows scaling),
+   * where the root stays 16px. A 14" laptop at 150% scaling (about 1280 x 600) gets 14px, so it keeps
+   * the same proportions instead of the same pixel sizes. Whichever of width or height is tighter
+   * wins, and it never goes below 14px or above 16px. Phones and tablets keep 16px.
+   */
+  @media (min-width: 1024px) and (pointer: fine) {
+    html {
+      font-size: min(
+        clamp(14px, calc(14px + 2 * (100vw - 1280px) / 256), 16px),
+        clamp(14px, calc(14px + 2 * (100vh - 600px) / 140), 16px)
+      );
+    }
+  }
+
   @media (min-width: 44rem) {
     html,
     body {

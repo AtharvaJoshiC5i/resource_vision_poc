@@ -18,8 +18,9 @@ import { useScrollEdges } from "../../hooks/useScrollEdges";
 import { CHART_AXIS, CHART_AXIS_TITLE, CHART_CURSOR, CHART_FONT, CHART_GRID, CHART_TOOLTIP } from "../../lib/chart";
 import { EMPTY, compactMonth, hours, integer, shortDate, text } from "../../lib/format";
 import { projectStatusTone } from "../../lib/status";
-import { PROJECT_TEAM_VIEWPORT, PROJECT_WORK_VIEWPORT } from "../../lib/viewport";
+import { PROJECT_TEAM_VIEWPORT, PROJECT_WORK_VIEWPORT, remPx } from "../../lib/viewport";
 import { ProjectsDirectory } from "./ProjectsDirectory";
+
 
 const COVERAGE_DEFAULT = "All Projects";
 
@@ -539,7 +540,7 @@ function TeamMonthCard({
       role="tooltip"
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      style={{ left: position.left, top: position.top, width: TEAM_CARD_WIDTH, maxHeight: position.maxHeight }}
+      style={{ left: position.left, top: position.top, width: remPx(TEAM_CARD_WIDTH), maxHeight: position.maxHeight }}
       className={`rv-popover fixed z-[60] flex flex-col overflow-hidden rounded-2xl bg-surface shadow-(--shadow-popover) ${
         position.side === "right" ? "origin-top-left" : "origin-top-right"
       }`}
@@ -599,7 +600,7 @@ function TeamMonthCard({
                       {meta ? ` · ${meta}` : ""}
                     </p>
                     {dash ? (
-                      <p className="mt-1 text-[11px] font-medium text-warning-ink">Assigned, hours not recorded</p>
+                      <p className="mt-1 text-[0.6875rem] font-medium text-warning-ink">Assigned, hours not recorded</p>
                     ) : (
                       <div className="mt-2 flex items-center gap-2">
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-canvas" aria-hidden="true">
@@ -608,7 +609,7 @@ function TeamMonthCard({
                             style={{ width: total > 0 ? `${Math.max(3, ((h ?? 0) / total) * 100)}%` : "0%" }}
                           />
                         </div>
-                        <span className="w-9 shrink-0 text-right text-[11px] font-medium tabular-nums text-muted">
+                        <span className="w-9 shrink-0 text-right text-[0.6875rem] font-medium tabular-nums text-muted">
                           {shareOf(h, total)}
                         </span>
                       </div>
@@ -650,7 +651,7 @@ function StaffingTile({
   current: boolean;
 }) {
   const [name, year] = month.label.split(" ");
-  const { ref, position, show, hide, toggle, cardId } = useHoverCard<HTMLButtonElement>(TEAM_CARD_WIDTH, TEAM_CARD_MAX_HEIGHT);
+  const { ref, position, show, hide, toggle, cardId } = useHoverCard<HTMLButtonElement>(remPx(TEAM_CARD_WIDTH), remPx(TEAM_CARD_MAX_HEIGHT));
   const planned = month.planned_hours ?? 0;
   const intensity = peak > 0 ? Math.min(1, planned / peak) : 0;
   const hasHours = month.has_data && planned > 0;
@@ -839,7 +840,7 @@ function ProjectStaffing({ detail, reportingWindowLabel: fullWindowLabel }: { de
         <span className="rv-emp-availability__foot-hint">
           <span
             aria-hidden="true"
-            className="inline-flex h-4 min-w-4 items-center justify-center gap-0.5 rounded-full bg-canvas/90 px-1 text-[10px] font-semibold text-ink-soft"
+            className="inline-flex h-4 min-w-4 items-center justify-center gap-0.5 rounded-full bg-canvas/90 px-1 text-[0.625rem] font-semibold text-ink-soft"
           >
             <UsersRound className="h-2.5 w-2.5" />
           </span>
