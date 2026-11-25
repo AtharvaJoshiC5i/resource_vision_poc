@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import re
+import unicodedata
+from datetime import datetime
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
+from pydantic import BaseModel, Field
 
 from app.database import DatabaseError
 from app.rv import service, skills, views
+from app.rv.exports.report import EmployeeReport, build_employee_report
 
 def _short_cache(response: Response) -> None:
     """Let the browser reuse a response briefly; the URL carries every filter."""
@@ -20,6 +26,8 @@ router = APIRouter(prefix="/api/rv", tags=["resource-vision"], dependencies=[Dep
 def _snapshot():
     try:
         return service.get_snapshot()
+    except service.DataSourceUnavailable as error:  # the reason is safe by construction
+        raise HTTPException(status_code=503, detail=str(error)) from error
     except DatabaseError as error:  # details are logged server-side only
         raise HTTPException(status_code=503, detail="The data source is currently unavailable.") from error
 
@@ -76,8 +84,28 @@ def meta():
         ],
         "data_quality": snap.data_quality,
         "source": service.data_source(),
+        "sources": service.source_options(),
         "data": service.data_info(),
     }
+
+
+class DataSourceChange(BaseModel):
+    source: str = Field(max_length=20)
+
+
+@router.post("/data-source", status_code=202)
+def change_data_source(change: DataSourceChange):
+    """Start switching between the Azure SQL and DBTEZ API sources. Poll /data-source/status."""
+    try:
+        return service.start_switch(change.source.strip().lower())
+    except service.SourceSwitchError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from None
+
+
+@router.get("/data-source/status")
+def data_source_status(response: Response):
+    response.headers["Cache-Control"] = "no-store"
+    return {**service.switch_status(), "current": service.data_source()}
 
 
 @router.get("/availability/options")
@@ -121,6 +149,76 @@ def employee_detail(key: Annotated[str, Path(max_length=100)]):
     if detail is None:
         raise HTTPException(status_code=404, detail="Employee not found.")
     return detail
+
+
+XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+PPTX_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+
+
+def _sample_note() -> str | None:
+    summary = service.data_info().get("load_summary") or {}
+    if not summary.get("sampled"):
+        return None
+    parts = []
+    if summary.get("sample_rows_per_month"):
+        parts.append(f"first {summary['sample_rows_per_month']:,} Project Track rows a month")
+    if summary.get("sample_hr_rows"):
+        parts.append(f"first {summary['sample_hr_rows']:,} ZingHR rows")
+    if summary.get("months_loaded") and summary.get("months_in_window"):
+        parts.append(f"{summary['months_loaded']} of {summary['months_in_window']} months loaded")
+    detail = ", ".join(parts) if parts else "not every record was loaded"
+    return f"Limited sample: {detail}. Totals may be incomplete."
+
+
+def _employee_report(key: str) -> EmployeeReport:
+    snap = _snapshot()
+    report = build_employee_report(
+        snap,
+        key,
+        source_label=service.SOURCE_LABELS.get(service.data_source(), service.data_source()),
+        sample_note=_sample_note(),
+        generated_at=datetime.now(),
+        capacity_hours=service.capacity_hours(),
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail="Employee not found.")
+    return report
+
+
+def _download_name(report: EmployeeReport, kind: str, extension: str) -> str:
+    name = unicodedata.normalize("NFKD", str(report.profile.get("name") or "Employee"))
+    name = re.sub(r"[^A-Za-z0-9]+", "-", name.encode("ascii", "ignore").decode()).strip("-") or "Employee"
+    code = re.sub(r"[^A-Za-z0-9]+", "", str(report.profile.get("code") or ""))
+    stem = "_".join(part for part in (name, code, kind, report.generated_at.strftime("%Y-%m-%d")) if part)
+    return f"{stem}.{extension}"
+
+
+def _file(content: bytes, media_type: str, filename: str) -> Response:
+    return Response(
+        content=content,
+        media_type=media_type,
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\"; filename*=UTF-8''{quote(filename)}",
+            "X-Content-Type-Options": "nosniff",
+            "Cache-Control": "no-store",  # employee data: never keep a copy in the browser cache
+        },
+    )
+
+
+@router.get("/employees/{key}/export.xlsx")
+def employee_workbook(key: Annotated[str, Path(max_length=100)]):
+    from app.rv.exports.xlsx import build_workbook
+
+    report = _employee_report(key)
+    return _file(build_workbook(report), XLSX_TYPE, _download_name(report, "availability", "xlsx"))
+
+
+@router.get("/employees/{key}/export.pptx")
+def employee_slide(key: Annotated[str, Path(max_length=100)]):
+    from app.rv.exports.slide import build_slide
+
+    report = _employee_report(key)
+    return _file(build_slide(report), PPTX_TYPE, _download_name(report, "profile", "pptx"))
 
 
 @router.get("/projects/options")

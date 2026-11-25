@@ -17,6 +17,7 @@ import { useMediaQuery } from "../../hooks/useMediaQuery";
 import type { Meta } from "../../api/types";
 import { shortDate } from "../../lib/format";
 import { Tooltip } from "../ui/Tooltip";
+import { DataSourceSwitch } from "./DataSourceSwitch";
 import { AvailabilityGuidePanel, AvailabilityGuideTrigger } from "./AvailabilityGuide";
 
 const NAV: { to: string; label: string; end: boolean; icon: LucideIcon }[] = [
@@ -110,12 +111,31 @@ function SidebarFootnote({ meta, expanded }: { meta: Meta | null | undefined; ex
     return <div className="skeleton h-4 w-24" aria-hidden="true" />;
   }
   return (
-    <p className="truncate text-xs text-muted">
-      {meta.source === "demo" && (
-        <span className="mr-1.5 font-medium text-warning-ink">Demo data</span>
-      )}
-      <span>As of {shortDate(meta.today)}</span>
-    </p>
+    <div>
+      <p className="truncate text-xs text-muted">
+        {meta.source === "demo" && (
+          <span className="mr-1.5 font-medium text-warning-ink">Demo data</span>
+        )}
+        <span>As of {shortDate(meta.today)}</span>
+      </p>
+      {meta.data?.load_summary?.sampled ? (
+        <p className="mt-1.5 text-xs leading-snug text-warning-ink">
+          Limited sample: first {meta.data.load_summary.sample_rows_per_month ?? "?"} rows a month, {meta.data.load_summary.months_loaded ?? "?"} of{" "}
+          {meta.data.load_summary.months_in_window ?? "?"} months. Totals are partial.
+        </p>
+      ) : null}
+      {meta.data?.load_summary?.unresolved_reasons &&
+      Object.keys(meta.data.load_summary.unresolved_reasons).length > 0 ? (
+        <p className="mt-1.5 text-xs leading-snug text-muted">
+          Rows needing review:{" "}
+          {Object.entries(meta.data.load_summary.unresolved_reasons)
+            .map(([reason, count]) => `${count} ${reason}`)
+            .join("; ")}
+          .
+        </p>
+      ) : null}
+      {meta.sources ? <DataSourceSwitch sources={meta.sources} /> : null}
+    </div>
   );
 }
 

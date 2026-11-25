@@ -23,7 +23,22 @@ export interface Meta {
   capacity_hours: number;
   window: MonthOption[];
   source: string;
+  sources?: DataSourceOptions;
+  data?: { load_summary?: { unresolved_reasons?: Record<string, number>; employees_without_hr_match?: number; employees_unverified_now?: number; sampled?: boolean; sample_rows_per_month?: number | null; months_loaded?: number; months_in_window?: number } };
   data_quality: Record<string, number>;
+}
+
+export interface DataSourceStatus {
+  status: "idle" | "loading" | "failed";
+  target: string | null;
+  error: string | null;
+  current?: string;
+}
+
+export interface DataSourceOptions {
+  current: string;
+  switch?: DataSourceStatus;
+  options: { id: "azure" | "dbtez"; label: string; available: boolean }[];
 }
 
 export interface AvailabilityOptions {

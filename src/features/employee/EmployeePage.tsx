@@ -2,7 +2,9 @@ import { Fragment, useId, useMemo, useState, type CSSProperties, type ReactNode 
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Briefcase, ChevronDown, ChevronRight, IdCard, Layers } from "lucide-react";
+import { Briefcase, ChevronDown, ChevronRight, FileSpreadsheet, IdCard, Layers, LoaderCircle, Presentation } from "lucide-react";
+
+import { ApiError, downloadFile } from "../../api/client";
 
 import type {
   AllocationChild,
@@ -1514,6 +1516,77 @@ function EmployeeAvailability({ detail, capacity }: { detail: EmployeeDetail; ca
   );
 }
 
+/* ----------------------------------------------------------------------------- exports */
+type ExportKind = "xlsx" | "pptx";
+
+const EXPORTS: { kind: ExportKind; label: string; busyLabel: string; title: string; Icon: typeof FileSpreadsheet }[] = [
+  {
+    kind: "xlsx",
+    label: "Excel report",
+    busyLabel: "Preparing Excel",
+    title: "Download the full availability workbook for internal use",
+    Icon: FileSpreadsheet,
+  },
+  {
+    kind: "pptx",
+    label: "Client slide",
+    busyLabel: "Preparing slide",
+    title: "Download a one-page profile to send to clients (no hours, rates or client names)",
+    Icon: Presentation,
+  },
+];
+
+/** Excel and slide downloads for one employee, at the top right of the employee page. */
+function EmployeeExports({ employeeKey, code }: { employeeKey: string; code: string }) {
+  const [busy, setBusy] = useState<ExportKind | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (kind: ExportKind) => {
+    setBusy(kind);
+    setError(null);
+    try {
+      await downloadFile(
+        `/employees/${encodeURIComponent(employeeKey)}/export.${kind}`,
+        `${code || "employee"}.${kind}`,
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "The export could not be created.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <div role="group" aria-label="Export employee" className="flex items-center gap-2">
+        {EXPORTS.map(({ kind, label, busyLabel, title, Icon }) => (
+          <AppTooltip key={kind} content={title}>
+            <button
+              type="button"
+              onClick={() => void run(kind)}
+              disabled={busy !== null}
+              aria-busy={busy === kind}
+              className={buttonClass}
+            >
+              {busy === kind ? (
+                <LoaderCircle aria-hidden="true" className="h-3.5 w-3.5 animate-spin text-muted" />
+              ) : (
+                <Icon aria-hidden="true" className="h-3.5 w-3.5 text-muted" />
+              )}
+              {busy === kind ? busyLabel : label}
+            </button>
+          </AppTooltip>
+        ))}
+      </div>
+      {error ? (
+        <p role="alert" className="max-w-xs text-right text-xs text-error-ink">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /* ----------------------------------------------------------------------------- page */
 export function EmployeePage() {
   const url = useUrlFilters();
@@ -1552,7 +1625,12 @@ export function EmployeePage() {
   return (
     <DashboardPage>
       <DetailChrome>
-        {backLink}
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+          {backLink}
+          {detail.data && !detail.error && profile ? (
+            <EmployeeExports employeeKey={profile.key} code={profile.code} />
+          ) : null}
+        </div>
         {detail.error && <ErrorBlock message={detail.error} onRetry={detail.reload} />}
         {!detail.error && !detail.data && <LoadingBlock height={420} label="Loading employee" />}
         {detail.data && !detail.error && profile && <EmployeeProfileChrome detail={detail.data} />}
